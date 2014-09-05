@@ -151,6 +151,7 @@ Manage cloud things for forj blueprints with puppet.
   - rspec debugging can be done with rspec -d <spec file>
   - rspec debugging when called from rake can be done by setting SPEC_OPTS='-d' export
 
+
 ## LICENSE ##
 
  (c) Copyright 2014 Hewlett-Packard Development Company, L.P.
