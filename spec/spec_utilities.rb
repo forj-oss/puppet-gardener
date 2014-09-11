@@ -28,16 +28,21 @@ module SpecUtilities
         return command("puppet","apply#{debug_opts} --modulepath=#{get_module_path} -e \"#{content}\" --noop")
       end
     end
-    def get_module_path
+    def get_module_path(ext_lib_name = 'maestro')
       module_root = File.expand_path(File.join(__FILE__, '..'))
-      this_module_path = File.expand_path(File.join(module_root,'..','..','..','modules'))
+
+# use the location of external 3rd party lib, structure is <lib_root>/<ext_lib_name>/puppet/modules
+# first relative to the root, 1lvl up, relative to the fixtures path (populated by .fixtures.yml)
+#
+      this_module_path = File.expand_path(File.join(module_root,'..',ext_lib_name,'puppet','modules'))
       spec_module_path = File.expand_path(File.join(module_root,'fixtures','modules'))
+      spec_ext_module_path = File.expand_path(File.join(spec_module_path,ext_lib_name,'puppet','modules'))
 
       if ENV['PUPPET_MODULES'] != nil
         modules = "#{ENV['PUPPET_MODULES']}:#{this_module_path.to_s}:#{spec_module_path}"
         return modules
       else
-        puppet_modules_path = ["/etc/puppet/modules", this_module_path,spec_module_path]
+        puppet_modules_path = [spec_module_path,spec_ext_module_path,this_module_path,"/etc/puppet/modules"]
         return puppet_modules_path.join(':').to_s
       end
     end

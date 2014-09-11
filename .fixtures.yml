@@ -15,8 +15,8 @@
 #
 # more info here: http://puppetlabs.com/blog/the-next-generation-of-puppet-module-testing
 fixtures:
-#  repositories:
-#    cloudcreds: "/opt/workspace/git/infra"
+  repositories:
+      maestro: "https://review.forj.io/forj-oss/maestro"
   symlinks:
     cloudcreds: "#{CLOUDCREDS_DIR}"
     gardener: "#{source_dir}"

@@ -93,6 +93,13 @@ Manage cloud things for forj blueprints with puppet.
   rake spec
 ```
 
+  Test under beaker
+
+```shell
+  bundle install
+  BEAKER_setfile=default bundle exec rspec spec/acceptance
+```
+
 ## Fog file configuration ##
   - The cloud.fog file by default is located in /opt/config/fog/cloud.fog.
   - This file should be secured by root, read / writable by root.  It will
@@ -129,6 +136,27 @@ Manage cloud things for forj blueprints with puppet.
     hp_account_id:
   forj:
     provider: hp
+```
+
+or alternative provider for openstack also works without api keys (prefered)
+
+If no DNS is available, comment or omit the section dns:
+
+```yaml
+  default:
+    openstack_username: '<user name>'
+    openstack_api_key: '<user password, not api key>'
+    openstack_auth_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
+    openstack_region: region-a.geo-1
+    openstack_tenant: '<project name>'
+  dns:
+    hp_access_key: '<api key>'
+    hp_secret_key: '<api secret key>'
+    hp_auth_uri: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+    hp_tenant_id: <project id number>
+    hp_avl_zone: region-a.geo-1
+  forj:
+    provider: openstack
 ```
 
    In this example, we use hp cloud for providing both compute and dns management.
