@@ -13,10 +13,10 @@
 #   limitations under the License.
 ---
 meta_location: 'spec/fixtures/meta.js'
-test_ipaddress: '10.0.0.233'
+test_ipaddress: '10.0.0.27'
 forjsite_id: 'dontdelete'
 forjdomain: 'spec.cdkdev.org'
-test_server_id: 'a1eb5fbf-0d2c-4fbd-b343-082dbb9405b3'
-test_public_ip: '15.125.98.67'
+test_server_id: 'e461d6f6-0e57-405f-be15-bdbda35472fa'
+test_public_ip: '15.125.96.210'
 test_server_name: 'spec.dontdelete'
 test_dns_name: 'spec.cdkdev.org'
