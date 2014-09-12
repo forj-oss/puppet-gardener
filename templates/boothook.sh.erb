@@ -62,19 +62,19 @@ set -x
 # Proxy management
 #
 _PROXY=<%= @http_proxy %>
-if [ -n "$_PROXY" ] && [ "$(grep -i http_proxy /etc/environment)" = "" ]
-then
+if [ -n "$_PROXY" ] ; then
+
+  if [ "$(grep -i http_proxy /etc/environment)" = "" ]; then
     echo "export HTTP_PROXY=$_PROXY
 export http_proxy=$_PROXY
 export HTTPS_PROXY=$_PROXY
 export https_proxy=$_PROXY
 export FTP_PROXY=$_PROXY
 export no_proxy=localhost,127.0.0.1,10.0.0.1,169.254.169.254" >> /etc/environment
-source /etc/environment
+  fi
 
 case  "$(GetOs)" in
   Ubuntu)
-
     if [ ! -f /etc/apt/apt.conf ]; then
       echo "Acquire::http::proxy \"$_PROXY\";
 Acquire::https::proxy \"$_PROXY\";
@@ -93,6 +93,9 @@ Acquire::ftp::proxy \"$_PROXY\";"  >/etc/apt/apt.conf
     ;;
   esac
 fi
+#
+# we source environment regardless
+source /etc/environment
 set +x
 #
 # Hostname configuration
