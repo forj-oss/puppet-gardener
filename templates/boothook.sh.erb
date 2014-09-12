@@ -14,6 +14,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+function GetOs
+{
+  python -c "
+import platform
+import sys
+
+def linux_distribution():
+  try:
+    return platform.linux_distribution()
+  except:
+    return "N/A"
+
+
+print(str(platform.linux_distribution()[0]))
+"
+}
 
 exec 6>&1 # Save stdout
 exec > >(tee -a /var/log/cloud-init.log)
@@ -34,12 +50,30 @@ export HTTPS_PROXY=$_PROXY
 export https_proxy=$_PROXY
 export FTP_PROXY=$_PROXY
 export no_proxy=localhost,127.0.0.1,10.0.0.1,169.254.169.254" >> /etc/environment
-    source /etc/environment
-    echo "Acquire::http::proxy \"$_PROXY\";
+source /etc/environment
+
+case  "$(GetOs)" in
+  Ubuntu)
+
+    if [ ! -f /etc/apt/apt.conf ]; then
+      echo "Acquire::http::proxy \"$_PROXY\";
 Acquire::https::proxy \"$_PROXY\";
 Acquire::ftp::proxy \"$_PROXY\";"  >/etc/apt/apt.conf
-fi  
-
+    fi
+    ;;
+  CentOS)
+    if [ -f /etc/yum.conf ]; then
+      grep "proxy=$_PROXY" /etc/yum.conf > /dev/null 2<&1
+      if [ ! $? -eq 0 ]; then
+        echo "proxy=$_PROXY" >>/etc/yum.conf
+      fi
+    fi
+    ;;
+  *)
+    ;;
+  esac
+fi
+set +x
 # Hostname configuration
 
 # site_name example = util.ch
@@ -56,13 +90,8 @@ if [ ! $? -eq 0 ]; then
    HOSTSTR=$(echo "127.0.0.1 ${_FQDN} ${_HOSTNAME}")
    bash -c 'echo '"$HOSTSTR"' >> /etc/hosts'
 fi
-hostname -b -F /etc/hostname
+hostname  -F /etc/hostname
 cat /etc/hostname
-
-# remove the ability from dhclient to update doamin and search parameters
-cp /etc/dhcp/dhclient.conf /etc/dhcp/dhclient.conf.bak
-sed -e "s/domain-name, domain-name-servers, domain-search, host-name,/domain-name-servers,/" /etc/dhcp/dhclient.conf --in-place
-
 
 # maestro to /etc/hosts
 
@@ -77,16 +106,22 @@ if [ ! $? -eq 0 ]; then
    bash -c 'echo '"$HOSTSTR"'>> /etc/hosts'
 fi
 
-sed -i -e \
+# OS specific finetuning
+case  "$(GetOs)" in
+  Ubuntu)
+    # remove the ability from dhclient to update doamin and search parameters
+    cp /etc/dhcp/dhclient.conf /etc/dhcp/dhclient.conf.bak
+    sed -e "s/domain-name, domain-name-servers, domain-search, host-name,/domain-name-servers,/" /etc/dhcp/dhclient.conf --in-place
+    sed -i -e \
           's,^archive.ubuntu.com/ubuntu,nova.clouds.archive.ubuntu.com/ubuntu,g'  \
            /etc/apt/sources.list 
 
-apt-get -qy update
-#apt-get -qy upgrade
+    apt-get -qy update
+    #apt-get -qy upgrade
 
-#defaults to Ubuntu
-# NB: keep in sync with openstack_project/files/00-puppet.pref
-cat > /etc/apt/preferences.d/00-puppet.pref <<EOF
+    #defaults to Ubuntu
+    # NB: keep in sync with openstack_project/files/00-puppet.pref
+    cat > /etc/apt/preferences.d/00-puppet.pref <<EOF
 Package: puppet puppet-common puppetmaster puppetmaster-common puppetmaster-passenger
 Pin: version 2.7*
 Pin-Priority: 501
@@ -97,18 +132,10 @@ EOF
     wget http://apt.puppetlabs.com/$puppet_deb -O $puppet_deb
     dpkg -i $puppet_deb
     rm $puppet_deb
-
-#TODO: delete once we have new metadata from params
-#_METADATA="{\"cdkdomain\": \"${_INSTANCE_DOMAIN}\", \"cdksite\": \"${_SITE}\", \"eroip\": \"${_PUPPET_MASTER_IP}\", \"erodomain\": \"${_INSTANCE_DOMAIN}\", \"erosite\": \"${_PUPPET_MASTER}\", \"kitopsip\": \"${_PUPPET_MASTER_PRIV_IP}\"}"
-echo '<%= @metadata %>' > /meta.js
-
-apt-get install -y git
-
-git clone https://github.com/openstack-infra/config
-
-bash ./config/install_puppet.sh
-
-echo 'node default {
+    
+    apt-get install -y git
+    
+    echo 'node default {
 
     notice("setup ${::fqdn}")
 
@@ -118,6 +145,35 @@ echo 'node default {
 
     package { $pkgs: ensure => present }
 }' > build_proto.pp
+    ;;
+  CentOS)
+    yum -y install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+    yum -y install git wget vim yum-utils
+    
+    echo 'node default {
+
+    notice("setup ${::fqdn}")
+
+    $pkgs = [ "libtool", "curl", "bison" , "python-novaclient", "kernel-devel", "openssl",
+    "unzip", "gcc", "gcc-c++", "make", "perl", "cpio" , "patch", "autoconf",
+    "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-devel" ]
+
+    package { $pkgs: ensure => present }
+}' > build_proto.pp
+    ;;
+  *)
+    ;;
+esac    
+
+#TODO: delete once we have new metadata from params
+#_METADATA="{\"cdkdomain\": \"${_INSTANCE_DOMAIN}\", \"cdksite\": \"${_SITE}\", \"eroip\": \"${_PUPPET_MASTER_IP}\", \"erodomain\": \"${_INSTANCE_DOMAIN}\", \"erosite\": \"${_PUPPET_MASTER}\", \"kitopsip\": \"${_PUPPET_MASTER_PRIV_IP}\"}"
+echo '<%= @metadata %>' > /meta.js
+
+
+
+git clone https://github.com/openstack-infra/config
+
+bash ./config/install_puppet.sh
 
 puppet apply --modulepath=/etc/puppet/modules/:. build_proto.pp
 
