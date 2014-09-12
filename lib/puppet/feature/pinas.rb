@@ -25,5 +25,6 @@ Puppet.features.add(:pinas) do
     true
   rescue Exception => err
     Puppet.warning "Could not load pinas_common: #{err}"
+    false
   end
 end

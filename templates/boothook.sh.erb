@@ -146,7 +146,7 @@ case  "$(GetOs)" in
 
     # on ubuntu
     # base line package install
-    PUPPET_PACKAGES='"git", "libtool", "curl", "wget", "bison" , "python-novaclient", "build-essential", "openssl",
+    export PUPPET_PACKAGES='"git", "libtool", "curl", "wget", "bison" , "python-novaclient", "build-essential", "openssl",
         "unzip", "gcc", "make", "perl", "cpio" , "patch", "autoconf",
         "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-dev"'
     ;;
@@ -156,7 +156,7 @@ case  "$(GetOs)" in
 
     # on dentos
     # base line package install
-    PUPPET_PACKAGES='"git", "wget", "libtool", "curl", "bison" , "python-novaclient", "kernel-devel", "openssl",
+    export PUPPET_PACKAGES='"git", "wget", "libtool", "curl", "bison" , "python-novaclient", "kernel-devel", "openssl",
     "unzip", "gcc", "gcc-c++", "make", "perl", "cpio" , "patch", "autoconf",
     "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-devel"'
     ;;
@@ -179,7 +179,7 @@ INSTALL_PUPPET
 #
 echo 'node default {
     notice("setup ${::fqdn}")
-    $pkgs = [ ${PUPPET_PACKAGES} ]
+    $pkgs = [ '${PUPPET_PACKAGES}' ]
     package { $pkgs: ensure => present }
 }' > build_proto.pp
 puppet apply --modulepath=/etc/puppet/modules/:. build_proto.pp

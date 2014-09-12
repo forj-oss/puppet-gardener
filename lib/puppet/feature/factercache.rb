@@ -31,5 +31,6 @@ Puppet.features.add(:factercache) do
     true
   rescue Exception => err
     Puppet.warning "Could not load factercache: #{err}"
+    false
   end
 end

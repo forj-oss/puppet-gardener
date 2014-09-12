@@ -33,5 +33,6 @@ Puppet.features.add(:fog_credentials) do
     true
   rescue Exception => err
     Puppet.warning "Problem with checking for feature fog_credentials: #{err}"
+    false
   end
 end

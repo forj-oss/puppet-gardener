@@ -37,5 +37,6 @@ Puppet.features.add(:array_ext) do
     true
   rescue Exception => err
     Puppet.warning "Could not load Array_ext: #{err}"
+    false
   end
 end
