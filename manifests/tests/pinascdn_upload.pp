@@ -20,6 +20,7 @@ class gardener::tests::pinascdn_upload (
   $local_dir  = '/tmp',
 ) {
   # include gardener::requirements
+  warning('DEPRICATED, use rake acceptance spec/acceptance/classes/pinascdn_spec.rb')
 
   file { "${local_dir}/${file_name}":
     content => 'This is a test for gardener::tests::pinascdn_upload'

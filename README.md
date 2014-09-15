@@ -36,68 +36,64 @@ Manage cloud things for forj blueprints with puppet.
 ## Intended Audience ##
   users of forj blueprints
 
-## Testing ##
+## Testing & Development ##
   setup your environment for testing:
 - basic requirements for ubuntu
 ```shell
  apt-get -y update && apt-get -y upgrade
- apt-get -y install git curl wget
- mkdir -p /opt/config/production/git && \
-       cd /opt/config/production/git && \
- GIT_SSL_NO_VERIFY=true git clone https://review.forj.io/forj-oss/maestro
+ apt-get -y install curl
 ```
-- Install puppet
+- we now use docker with beaker for test case acceptance.
+- It's possible to setup an environment for testing with
+  the following prepare script.
+- Run the script as a user with sudo access for root.
+- copy of all git repos are placed in ~/prepare/git, set GIT_HOME for alternate location.
 ```shell
- /opt/config/production/git/maestro/puppet/install_puppet.sh 
+ curl https://raw.githubusercontent.com/forj-oss/redstone/master/puppet/modules/runtime_project/files/nodepool/scripts/prepare_node_docker.sh | bash -xe
 ```
-- Install 3rd party modules
+- alternatively you can also setup dev environment manually
 ```shell
- /opt/config/production/git/maestro/puppet/install_modules.sh 
+  git clone https://review.forj.io/forj-oss/maestro
+  bash ./maestro/puppet/install_puppet.sh
+  bash ./maestro/puppet/install_module.sh
+  bash ./maestro/hiera/hiera.sh
+  puppet module install garethr/docker --version '1.2.2'
+  puppet -e "include gardener
+  include compiler_tools::install::rubydev
+  include compiler_tools::install::puppetlint
+  include docker"
+# you will also need to create nodeset images for each system under test in
+# spec/acceptance/nodeset folder.  
 ```
-- Install hiera
+- Install required gems for development environment.
 ```shell
- /opt/config/production/git/maestro/hiera/hiera.sh 
-```
-
-- Install required gems 
-```shell
-    gem1.8 install bundler --no-rdoc --no-ri
-    bundle install --gemfile .gemfile
+    gem1.9.1 install bundler --no-rdoc --no-ri
+    ruby1.9.1 -S bundle install --gemfile Gemfile
 ```
 
 ### Run Test ###
-- Setup fog file configuration as described below
+- Setup fog file configuration as described below, use FOG_RC environment value 
+  to point to a valid fog file.
 ```shell
-  rake spec
+  ruby1.9.1 -S rake acceptance
 ```
-
-### Perform lint testing ###
+- Additional beaker run options
 ```shell
-  rake lint
+   # don't destroy image after test
+   env BEAKER_destroy=no ruby1.9.1 -S rake acceptance
 ```
-
-### Test setup automation ###
-  Use these modules to setup an automated build server for testing:
-
+- When you don't destroy the container, you can connect to it locally after test runs.
 ```shell
-  puppet -e "include gardener
-  include compiler_tools::install::rubydev
-  include compiler_tools::install::puppetlint"
-```
-
-  Now your ready for testing.   You can do this by running the commands in the 
-  same directory as the Rakefile.
-
-```shell
-  rake lint
-  rake spec
-```
-
-  Test under beaker
+  #list the running containers
+  docker ps
+  # connect from host machine
+  ssh -p $(docker ps |grep '22/tcp'|head -1|awk -F: '{print $2}'|sed 's/->.*//g') root@localhost
+  # password to use is root
+- Specify alternate nodeset SUT file
 
 ```shell
   bundle install
-  BEAKER_setfile=default bundle exec rspec spec/acceptance
+  export BEAKER_setfile=default; ruby1.9.1 -S rake acceptance
 ```
 
 ## Fog file configuration ##
@@ -172,9 +168,14 @@ If no DNS is available, comment or omit the section dns:
 
 ## Debugging tips ##
 
+- export RAKE_DEBUG=true, will enable debugger library and statement.
+```shell
+  env BEAKER_destroy=no RAKE_DEBUG=true ruby1.9.1 -r debug -S rake acceptance
+```
 - Use export FOG_DEBUG=true , this will show excon debug output ... note, passwords will show up to.
 - Use export SPEC_PP_OFF=false, this will turn off the :apply flag and prevent puppet apply steps.
-- Use ruby-debug + debugger statement in source, this enables interactive debugging on source.
+- When using ruby-debug on ruby1.8 + debugger statement in source,
+  this enables interactive debugging on source.
   - rake debugging can be done with rdebug rake spec.
   - rspec debugging can be done with rspec -d <spec file>
   - rspec debugging when called from rake can be done by setting SPEC_OPTS='-d' export
