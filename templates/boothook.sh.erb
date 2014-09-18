@@ -64,16 +64,26 @@ set -x
 _PROXY=<%= @http_proxy %>
 if [ -n "$_PROXY" ] ; then
 
-  if [ "$(grep  http_proxy /etc/environment)" = "" ] || [ "$(grep  HTTP_PROXY /etc/environment)" = "" ] ; then
-    echo "export HTTP_PROXY=$_PROXY
-export http_proxy=$_PROXY
-export HTTPS_PROXY=$_PROXY
+  if [ "$(grep  http_proxy /etc/environment)" = "" ] ; then
+    echo "export http_proxy=$_PROXY
 export https_proxy=$_PROXY
-export FTP_PROXY=$_PROXY
-export no_proxy=localhost,127.0.0.1,10.0.0.0/8,169.254.169.254" >> /etc/environment
+export ftp_PROXY=$_PROXY" >> /etc/environment
   fi
-
-case  "$(GetOs)" in
+  if  [ "$(grep  HTTP_PROXY /etc/environment)" = "" ] ; then
+    echo "export HTTP_PROXY=$_PROXY
+export HTTPS_PROXY=$_PROXY
+export FTP_PROXY=$_PROXY" >> /etc/environment
+  fi
+  if [ "$(grep  no_proxy /etc/environment)" = "" ] ; then
+    echo "
+export no_proxy=localhost,127.0.0.1,10.0.0.0/16,169.254.169.254" >> /etc/environment
+  fi
+  if [ "$(grep  NO_PROXY /etc/environment)" = "" ] ; then
+    echo "
+export NO_PROXY=localhost,127.0.0.1,10.0.0.0/16,169.254.169.254" >> /etc/environment
+  fi
+  
+  case  "$(GetOs)" in
   Ubuntu)
     if [ ! -f /etc/apt/apt.conf ]; then
       echo "Acquire::http::proxy \"$_PROXY\";
