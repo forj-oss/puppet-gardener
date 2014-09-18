@@ -120,6 +120,7 @@ module Puppet
         begin
           new_server = @compute.servers.create(options)
           new_server.wait_for { ready?}
+          new_server.wait_for { !addresses.nil? }
         rescue Exception => e
            Puppet.crit "servers.create Error: #{e}"
            raise Puppet::Error, "Error : #{e}"
@@ -127,7 +128,7 @@ module Puppet
   
         Puppet.notice "server created #{server_name} on net #{template[:network_name]} "
         begin
-          server_ip_assign(server_name)
+          newserver_ip_assign(new_server)
         rescue  Exception => e
           Puppet.crit "server_ip_assign Error: #{e}"
           raise Puppet::Error, "Error : #{e}"
@@ -186,8 +187,41 @@ module Puppet
         end
         return String.new
       end
-
-      # assign floating IP address to server
+      # assign floating IP address to server by server  hash
+      # TODO: consider moving to network class.
+      # only assign an ip if the server does not have two addresses yet.
+      def newserver_ip_assign(server)
+        if server != nil
+          addresses = server.addresses
+          if addresses != nil
+            network_name = server.addresses.keys.reduce
+          else
+            raise Puppet::Error, "Server has no network connections"
+          end  
+          if addresses[network_name].count < 2
+          # check if already assigned
+            new_ip = nil
+            ip = get_free_floating_ip(server)
+            if ip != nil
+              begin
+                new_ip = @compute.associate_address(server.id, ip)
+                Puppet.notice "#{server.name} assigned ip => #{ip}"
+              rescue Exception => e
+                  Puppet.err e
+                  raise Puppet::Error, "associate_address Error : #{e}"
+              end
+            else
+              Puppet.warning "unable to assign server an ip : #{server.name}"
+              return nil
+            end
+          end
+        else
+          Puppet.warning "unable to find server to assign new ip #{server.name}"
+          return nil
+        end
+        return ip
+      end
+      # assign floating IP address to server by server name
       # TODO: consider moving to network class.
       # only assign an ip if the server does not have two addresses yet.
       def server_ip_assign(server_name)

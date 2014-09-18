@@ -64,13 +64,13 @@ set -x
 _PROXY=<%= @http_proxy %>
 if [ -n "$_PROXY" ] ; then
 
-  if [ "$(grep -i http_proxy /etc/environment)" = "" ]; then
+  if [ "$(grep  http_proxy /etc/environment)" = "" ] || [ "$(grep  HTTP_PROXY /etc/environment)" = "" ] ; then
     echo "export HTTP_PROXY=$_PROXY
 export http_proxy=$_PROXY
 export HTTPS_PROXY=$_PROXY
 export https_proxy=$_PROXY
 export FTP_PROXY=$_PROXY
-export no_proxy=localhost,127.0.0.1,10.0.0.1,169.254.169.254" >> /etc/environment
+export no_proxy=localhost,127.0.0.1,10.0.0.0/8,169.254.169.254" >> /etc/environment
   fi
 
 case  "$(GetOs)" in
