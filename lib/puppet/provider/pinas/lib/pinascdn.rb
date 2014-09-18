@@ -36,10 +36,21 @@ module Puppet
       end
 
 
+      def getContainer(target)
+        begin
+          return @cdn.directories.get(target)
+        rescue Exception => e
+          Puppet.warning e.message
+          Puppet.debug e.backtrace.inspect
+          raise "Unable to create a Fog Storage Connection, verify your Fog configuration."
+        end
+      end
+
+
       #Uploads a file to object storage
       def file_upload(source, target, name)
         Puppet.debug "Uploading #{source}/#{name} to #{target}"
-        dir = @cdn.directories.get(target)
+        dir = getContainer(target)
 
         if dir.nil?
           #Create a directory     
@@ -65,14 +76,14 @@ module Puppet
       #Deletes a file from object storage
       def file_unlink(target, name)
         Puppet.debug "Deleting #{target}/#{name}"
-        dir = @cdn.directories.get(target)
+        dir = getContainer(target)
 
         if dir.nil?
-          raise "Puppet::PinasCdn::file_unlink: Directory doesnt exist (#{target})."
+          Puppet.warning "Puppet::PinasCdn::file_unlink: Container doesnt exist (#{target})."
         else        
           file = dir.files.get(name)
           if file.nil?
-            raise "Puppet::PinasCdn::file_unlink: File doesnt exist (#{name})."
+            Puppet.warning "Puppet::PinasCdn::file_unlink: File doesnt exist (#{name})."
           else 
             file.destroy
             Puppet.debug "Deleted!"
@@ -84,9 +95,10 @@ module Puppet
       #Verifies if a file exists in object storage
       def file_exists(target, name)
         r = false
-        dir = @cdn.directories.get(target)
+        dir = getContainer(target)
+
         if dir.nil?
-          Puppet.debug "Directory doesn't exist: #{target}"
+          Puppet.debug "Container doesn't exist: #{target}"
         else
           file = dir.files.get(name)
           if file.nil?
