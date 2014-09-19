@@ -40,11 +40,15 @@ cat /etc/puppet/puppet.conf | tee -a /tmp/info
 
 # puppet cert list
 
-# REMOVED because we install puppet from url
-# fix bug with crud failing
-#apt-get -q -y install rubygems1.8
-#apt-get -q -y install ruby1.8-dev
-#/usr/bin/gem1.8 install json --no-rdoc -no-ri
+#
+# We need to make sure json gem is installed
+# before we attempt any puppet runs.
+# if json fails to load meta_location fails, therefore 
+# erosite and erodomain can not be read from /meta.js
+#
+apt-get -q -y install rubygems1.8
+apt-get -q -y install ruby1.8-dev
+ruby1.8 -S /usr/bin/gem1.8 install json --no-rdoc -no-ri
 
 # we perform multiple agent runs so we can allow other configs to execute and update maestro console faster
 # TODO (wenlock): improve this when we implement an event triggering option.
