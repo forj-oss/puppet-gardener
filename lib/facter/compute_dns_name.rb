@@ -67,8 +67,9 @@ Facter.add("compute_dns_name") do
           if @loader.get_provider == nil and isready == true
             Facter.warn "Pinas fog configuration missing."
             isready = false
-            break
           end
+        end
+        if isready
           Facter.debug "using provider #{@loader.get_provider}"
 
           # compute service

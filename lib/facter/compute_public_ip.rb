@@ -68,6 +68,8 @@ Facter.add("compute_public_ip") do
             Facter.warn "Pinas fog configuration missing."
             isready = false
           end
+        end
+        if isready == true
           Facter.debug "using provider #{@loader.get_provider}"
 
         # compute service
