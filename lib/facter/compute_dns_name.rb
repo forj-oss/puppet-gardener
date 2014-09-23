@@ -1,4 +1,4 @@
-# == gardener::compute_id_lookupbyip
+# == gardener::compute_dns_name
 # (c) Copyright 2014 Hewlett-Packard Development Company, L.P.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,7 @@ Facter.add("compute_dns_name") do
           if @loader.get_provider == nil and isready == true
             Facter.warn "Pinas fog configuration missing."
             isready = false
+            break
           end
           Facter.debug "using provider #{@loader.get_provider}"
 
