@@ -12,19 +12,23 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+# manage a server node using fog
+# our default provider implements on hp cloud
+# we add additional providers based on this one
 
-Puppet.features.add(:pinas) do
-  begin
-    # lib
-    __LIB_DIR__ = File.expand_path(File.dirname(__FILE__))
-    __LIB_DIR__ = File.join(__LIB_DIR__ , "..")
-    __LIB_DIR__ = File.join(__LIB_DIR__ , "..")
-    $LOAD_PATH.unshift __LIB_DIR__ unless $LOAD_PATH.include?(__LIB_DIR__)
-    require "puppet/provider/pinas/lib/common"
-    Puppet.debug "loaded #{__LIB_DIR__}/puppet/provider/pinas/lib/common"
-    true
-  rescue Exception => err
-    Puppet.warning "Could not load pinas_common: #{err}"
-    false
-  end
+# https://docs.hpcloud.com/bindings/fog/compute
+
+require 'fog' if Puppet.features.fog?
+require 'json' if Puppet.features.json?
+require 'puppet/provider/pinascdn/loader' if Puppet.features.pinas?
+require 'puppet/provider/pinascdn/actions' if Puppet.features.pinas?
+
+Puppet::Type.type(:pinascdn).provide :cdn do
+  desc "Creates cdn for Gardener."
+  confine :feature => :fog
+  confine :feature => :json
+  confine :feature => :pinas
+  include ::Pinas::Cdn::Actions
+  include ::Pinas::Cdn::Provider
 end
+

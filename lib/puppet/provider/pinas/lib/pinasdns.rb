@@ -49,7 +49,10 @@ module Puppet
         dns_name = String.new
         @dns.domains.each do |zone|
           @dns.domains.get(zone.id).records.each do | record |
-            dns_name = record.name if record.data == ip and record.type.to_sym == type
+            if record.data == ip and record.type.to_sym == type
+              dns_name = record.name
+              break
+            end
           end
         end
         return dns_name

@@ -24,6 +24,9 @@ define gardener::gen_userdata (
   $t_site            = '',
   $http_proxy        = '',
   $template          = undef,
+  $boot_hook         = 'gardener/boothook.sh.erb',
+  $boot_node         = 'gardener/boot-node.sh.erb',
+  $cloud_config      = 'gardener/cloud-config-node.yaml.erb',
 )
 {
   Exec { path => [  '/usr/local/bin',
@@ -74,17 +77,17 @@ define gardener::gen_userdata (
       } ->
   file { "/tmp/boothook.${site}.sh":
     ensure  => present,
-    content => template('gardener/boothook.sh.erb'),
+    content => template($boot_hook),
     replace => true,
   } ->
   file { "/tmp/boot-node.${site}.sh":
     ensure  => present,
-    content => template('gardener/boot-node.sh.erb'),
+    content => template($boot_node),
     replace => true,
   } ->
   file { "/tmp/cloud-config-node.${site}.yaml":
     ensure  => present,
-    content => template('gardener/cloud-config-node.yaml.erb'),
+    content => template($cloud_config),
     replace => true,
   }->
   exec { "create ${userdata}":

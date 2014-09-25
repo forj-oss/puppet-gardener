@@ -1,3 +1,4 @@
+# == gardener::tests::object_storage
 # (c) Copyright 2014 Hewlett-Packard Development Company, L.P.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,12 +12,19 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
----
-meta_location: 'spec/fixtures/meta.js'
-test_ipaddress: '10.0.0.27'
-forjsite_id: 'dontdelete'
-forjdomain: 'spec.cdkdev.org'
-test_server_id: 'e461d6f6-0e57-405f-be15-bdbda35472fa'
-test_public_ip: '15.125.96.210'
-test_server_name: 'spec.dontdelete'
-test_dns_name: 'spec.cdkdev.org'
+#
+
+class gardener::tests::pinascdn_delete (
+  $file_name  = 'sample.txt',
+  $remote_dir = 'fog-rocks',
+) {
+  # include gardener::requirements
+
+  # Deleting a file in Cloud Storage
+  pinascdn {'myPinasCdnDelete':
+    ensure      => absent,
+    file_name   => $file_name,
+    remote_dir  => $remote_dir,
+  }
+
+}

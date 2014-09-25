@@ -120,6 +120,7 @@ module Puppet
         begin
           new_server = @compute.servers.create(options)
           new_server.wait_for { ready?}
+          new_server.wait_for { !addresses.nil? }
         rescue Exception => e
            Puppet.crit "servers.create Error: #{e}"
            raise Puppet::Error, "Error : #{e}"
@@ -127,7 +128,7 @@ module Puppet
   
         Puppet.notice "server created #{server_name} on net #{template[:network_name]} "
         begin
-          server_ip_assign(server_name)
+          newserver_ip_assign(new_server)
         rescue  Exception => e
           Puppet.crit "server_ip_assign Error: #{e}"
           raise Puppet::Error, "Error : #{e}"
@@ -186,8 +187,41 @@ module Puppet
         end
         return String.new
       end
-
-      # assign floating IP address to server
+      # assign floating IP address to server by server  hash
+      # TODO: consider moving to network class.
+      # only assign an ip if the server does not have two addresses yet.
+      def newserver_ip_assign(server)
+        if server != nil
+          addresses = server.addresses
+          if addresses != nil
+            network_name = server.addresses.keys.reduce
+          else
+            raise Puppet::Error, "Server has no network connections"
+          end  
+          if addresses[network_name].count < 2
+          # check if already assigned
+            new_ip = nil
+            ip = get_free_floating_ip(server)
+            if ip != nil
+              begin
+                new_ip = @compute.associate_address(server.id, ip)
+                Puppet.notice "#{server.name} assigned ip => #{ip}"
+              rescue Exception => e
+                  Puppet.err e
+                  raise Puppet::Error, "associate_address Error : #{e}"
+              end
+            else
+              Puppet.warning "unable to assign server an ip : #{server.name}"
+              return nil
+            end
+          end
+        else
+          Puppet.warning "unable to find server to assign new ip #{server.name}"
+          return nil
+        end
+        return ip
+      end
+      # assign floating IP address to server by server name
       # TODO: consider moving to network class.
       # only assign an ip if the server does not have two addresses yet.
       def server_ip_assign(server_name)
@@ -337,73 +371,40 @@ module Puppet
 
       # return the flavor_id from the server_template[:flavor_name]
       def get_flavor(flavor_name)
-        flavors = nil
-        flavor_to_use = flavor_name
-        if !is_numeric?(flavor_to_use)
-  	      flavor_to_use = nil
-          @compute.flavors.each do |flavor|
-            if flavor.name == flavor_name
-              flavor_to_use = flavor.id.to_s
-              break
-            end
-    #        p "#{flavor.id} - #{flavor.name} - #{flavor.ram} - #{flavor.disk}"
-          end
-          if flavor_to_use.nil?
-            raise "Flavor '#{flavor_name}' was not found."
-          else
-            Puppet.notice "Flavor '#{flavor_name}' found : '#{flavor_to_use}'"
-          end
+        flavor_res = find_match(@compute.flavors, flavor_name)
+        flavor_to_use = (flavor_res != nil) ? flavor_res.id.to_s : nil
+        if flavor_to_use.nil?
+          Puppet.crit "The flavor is not found on cloud account!, flavor_name => #{flavor_name}"
+          raise Puppet::Error, "The flavor is not found on cloud account!, flavor_name => #{flavor_name}"
+        else
+          Puppet.notice "Flavor '#{flavor_name}' found : '#{flavor_to_use}'"
         end
-  
         return flavor_to_use
       end
   
       # return the network_id from the server_template[:network_name]
       # network.networks[2].name  but with Fog::Network
       def get_networkid(network_name)
-        networks = nil
-        network_to_use = network_name
-        Puppet.debug "before network name is #{network_name}."
-        
-        
-        network_to_use = nil
-        if @network != nil
-          @network.networks.each do |network|
-            if network.name == network_name
-              network_to_use = network.id.to_s
-    
-              Puppet.debug "got network to use as #{network_to_use}."
-    
-              break
-            end
-          end
-        end
+        network_res = find_match(@network.networks, network_name)
+        network_to_use = (network_res != nil) ? network_res.id.to_s : nil
         if network_to_use.nil?
-          raise "network '#{network_name}' was not found."
+          Puppet.crit "The network is not found on cloud account!, network_name => #{network_name}"
+          raise Puppet::Error, "The network is not found on cloud account!, network_name => #{network_name}"
         else
-          Puppet.debug "network '#{network_name}' found : '#{network_to_use}'"
+          Puppet.notice "Network '#{network_name}' found : '#{network_to_use}'"
         end
-        Puppet.debug "using #{network_to_use}."
         return network_to_use
       end
   
     # return the image_id from the server_template[:image_name]
       def get_image(image_name)
-        image_to_use = image_name
-        if !is_numeric?(image_to_use)
-          images = @compute.images
-  	      image_to_use = nil
-          images.each do |image|
-            if image.name == image_name
-              image_to_use = image.id.to_s
-              break
-            end
-          end
-          if image_to_use.nil?
-            raise "Image '#{image_name}' was not found."
-          else
-            Puppet.notice "Image '#{image_name}' found : '#{image_to_use}'"
-          end
+        image_res = find_match(@compute.images, image_name)
+        image_to_use = (image_res != nil) ? image_res.id : nil
+        if image_to_use.nil?
+          Puppet.crit "The image is not found on cloud account!, image_name => #{image_name}"
+          raise Puppet::Error, "The image is not found on cloud account!, image_name => #{image_name}"
+        else
+          Puppet.notice "Image '#{image_name}' found : '#{image_to_use}'"
         end
         return image_to_use
       end

@@ -14,6 +14,41 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+function GetOs
+{
+  python -c "
+import platform
+import sys
+
+def linux_distribution():
+  try:
+    return platform.linux_distribution()
+  except:
+    return "N/A"
+
+
+print(str(platform.linux_distribution()[0]))
+"
+}
+
+# make sure we have good dns
+# install puppet agent from maestro, first try github then try review.forj.io
+# we provide an option META_INSTALL_PUPPET_URL for specifying an alternative
+# puppet url to use for installing pupppet.
+function INSTALL_PUPPET
+{
+  _meta_install_puppet_url=<%= @META_INSTALL_PUPPET_URL %>
+  if [ -z "${_meta_install_puppet_url}" ]; then
+    dig raw.githubusercontent.com
+    if [ $? -eq 0 ] ; then
+      curl https://raw.githubusercontent.com/forj-oss/maestro/master/puppet/install_puppet.sh | bash -xe
+    else
+      curl https://review.forj.io/gitweb?p=forj-oss/maestro.git;a=blob_plain;f=puppet/install_puppet.sh;h=da0f9808379e18a0dbbba20a9bcec8f1947e2d71;hb=HEAD | bash -xe
+    fi
+  else
+    curl $_meta_install_puppet_url | bash -xe
+  fi
+}
 
 exec 6>&1 # Save stdout
 exec > >(tee -a /var/log/cloud-init.log)
@@ -22,52 +57,79 @@ exec 2>&1
 echo "################# BOOTHOOK Start ########################"
 set -x
 
-_PROXY=<%= @http_proxy %>
 
+#
 # Proxy management
+#
+_PROXY=<%= @http_proxy %>
+if [ -n "$_PROXY" ] ; then
 
-if [ -n "$_PROXY" ] && [ "$(grep -i http_proxy /etc/environment)" = "" ]
-then
-    echo "export HTTP_PROXY=$_PROXY
-export http_proxy=$_PROXY
-export HTTPS_PROXY=$_PROXY
+  if [ "$(grep  http_proxy /etc/environment)" = "" ] ; then
+    echo "export http_proxy=$_PROXY
 export https_proxy=$_PROXY
-export FTP_PROXY=$_PROXY
-export no_proxy=localhost,127.0.0.1,10.0.0.1,169.254.169.254" >> /etc/environment
-    source /etc/environment
-    echo "Acquire::http::proxy \"$_PROXY\";
+export ftp_PROXY=$_PROXY" >> /etc/environment
+  fi
+  if  [ "$(grep  HTTP_PROXY /etc/environment)" = "" ] ; then
+    echo "export HTTP_PROXY=$_PROXY
+export HTTPS_PROXY=$_PROXY
+export FTP_PROXY=$_PROXY" >> /etc/environment
+  fi
+  if [ "$(grep  no_proxy /etc/environment)" = "" ] ; then
+    echo "
+export no_proxy=localhost,127.0.0.1,10.0.0.0/16,169.254.169.254" >> /etc/environment
+  fi
+  if [ "$(grep  NO_PROXY /etc/environment)" = "" ] ; then
+    echo "
+export NO_PROXY=localhost,127.0.0.1,10.0.0.0/16,169.254.169.254" >> /etc/environment
+  fi
+  
+  case  "$(GetOs)" in
+  Ubuntu)
+    if [ ! -f /etc/apt/apt.conf ]; then
+      echo "Acquire::http::proxy \"$_PROXY\";
 Acquire::https::proxy \"$_PROXY\";
 Acquire::ftp::proxy \"$_PROXY\";"  >/etc/apt/apt.conf
-fi  
-
+    fi
+    ;;
+  CentOS)
+    if [ -f /etc/yum.conf ]; then
+      grep "proxy=$_PROXY" /etc/yum.conf > /dev/null 2<&1
+      if [ ! $? -eq 0 ]; then
+        echo "proxy=$_PROXY" >>/etc/yum.conf
+      fi
+    fi
+    ;;
+  *)
+    ;;
+  esac
+fi
+#
+# we source environment regardless
+source /etc/environment
+set +x
+#
 # Hostname configuration
-
 # site_name example = util.ch
 # domain example = .ch.forj.io
+#
 _SITE=<%= @site_name %>
 _HOSTNAME=$(echo $_SITE | awk -F'.' '{print $1}')
 _INSTANCE_DOMAIN=<%= @domain %>
 _FQDN=$_HOSTNAME.$_INSTANCE_DOMAIN
 
 echo $_FQDN > /etc/hostname
-
 cat /etc/hosts| grep "^127.0.0.1 ${_FQDN} ${_HOSTNAME}" > /dev/null 2<&1
 if [ ! $? -eq 0 ]; then
    HOSTSTR=$(echo "127.0.0.1 ${_FQDN} ${_HOSTNAME}")
    bash -c 'echo '"$HOSTSTR"' >> /etc/hosts'
 fi
-hostname -b -F /etc/hostname
+hostname  -F /etc/hostname
 cat /etc/hostname
 
-# remove the ability from dhclient to update doamin and search parameters
-cp /etc/dhcp/dhclient.conf /etc/dhcp/dhclient.conf.bak
-sed -e "s/domain-name, domain-name-servers, domain-search, host-name,/domain-name-servers,/" /etc/dhcp/dhclient.conf --in-place
-
-
+#
 # maestro to /etc/hosts
-
+#
 _PUPPET_MASTER_IP=<% if defined?(@helion_public_ipv4) %><%= @helion_public_ipv4 %><% elsif defined?(@ec2_public_ipv4) %><%= @ec2_public_ipv4 %><% else %><%= @ipaddress %><% end %>
-
 _PUPPET_MASTER=<%= @hostname %>
 _PUPPET_MASTER_FQDN=<%= @fqdn %>
 
@@ -77,48 +139,59 @@ if [ ! $? -eq 0 ]; then
    bash -c 'echo '"$HOSTSTR"'>> /etc/hosts'
 fi
 
-sed -i -e \
+#
+# OS specific finetuning
+# we minimally need curl
+case  "$(GetOs)" in
+  Ubuntu)
+    # remove the ability from dhclient to update doamin and search parameters
+    cp /etc/dhcp/dhclient.conf /etc/dhcp/dhclient.conf.bak
+    sed -e "s/domain-name, domain-name-servers, domain-search, host-name,/domain-name-servers,/" /etc/dhcp/dhclient.conf --in-place
+    sed -i -e \
           's,^archive.ubuntu.com/ubuntu,nova.clouds.archive.ubuntu.com/ubuntu,g'  \
            /etc/apt/sources.list 
 
-apt-get -qy update
-#apt-get -qy upgrade
+    apt-get -qy update
+    apt-get -y install curl
 
-#defaults to Ubuntu
-# NB: keep in sync with openstack_project/files/00-puppet.pref
-cat > /etc/apt/preferences.d/00-puppet.pref <<EOF
-Package: puppet puppet-common puppetmaster puppetmaster-common puppetmaster-passenger
-Pin: version 2.7*
-Pin-Priority: 501
-EOF
+    # on ubuntu
+    # base line package install
+    export PUPPET_PACKAGES='"git", "libtool", "curl", "wget", "bison" , "python-novaclient", "build-essential", "openssl",
+        "unzip", "gcc", "make", "perl", "cpio" , "patch", "autoconf",
+        "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-dev"'
+    ;;
+  CentOS)
+    yum -y install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+    yum -y install curl
 
-    lsbdistcodename=`lsb_release -c -s`
-    puppet_deb=puppetlabs-release-${lsbdistcodename}.deb
-    wget http://apt.puppetlabs.com/$puppet_deb -O $puppet_deb
-    dpkg -i $puppet_deb
-    rm $puppet_deb
+    # on dentos
+    # base line package install
+    export PUPPET_PACKAGES='"git", "wget", "libtool", "curl", "bison" , "python-novaclient", "kernel-devel", "openssl",
+    "unzip", "gcc", "gcc-c++", "make", "perl", "cpio" , "patch", "autoconf",
+    "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-devel"'
+    ;;
+  *)
+    ;;
+esac    
 
-#TODO: delete once we have new metadata from params
-#_METADATA="{\"cdkdomain\": \"${_INSTANCE_DOMAIN}\", \"cdksite\": \"${_SITE}\", \"eroip\": \"${_PUPPET_MASTER_IP}\", \"erodomain\": \"${_INSTANCE_DOMAIN}\", \"erosite\": \"${_PUPPET_MASTER}\", \"kitopsip\": \"${_PUPPET_MASTER_PRIV_IP}\"}"
+#
+# setup metadata
+#
 echo '<%= @metadata %>' > /meta.js
 
-apt-get install -y git
+#
+# setup puppet using external resource.
+#
+INSTALL_PUPPET
 
-git clone https://github.com/openstack-infra/config
-
-bash ./config/install_puppet.sh
-
+#
+# install os base packages
+#
 echo 'node default {
-
     notice("setup ${::fqdn}")
-
-    $pkgs = [ "libtool", "curl", "wget", "bison" , "python-novaclient", "build-essential", "openssl",
-    "unzip", "gcc", "make", "perl", "cpio" , "patch", "autoconf",
-    "bzip2", "tcpdump", "strace", "python-paramiko", "libxslt-dev" ]
-
+    $pkgs = [ '${PUPPET_PACKAGES}' ]
     package { $pkgs: ensure => present }
 }' > build_proto.pp
-
 puppet apply --modulepath=/etc/puppet/modules/:. build_proto.pp
 
 set +x

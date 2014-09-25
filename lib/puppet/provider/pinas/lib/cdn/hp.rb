@@ -11,12 +11,24 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
----
-meta_location: 'spec/fixtures/meta.js'
-test_ipaddress: '10.0.0.27'
-forjsite_id: 'dontdelete'
-forjdomain: 'spec.cdkdev.org'
-test_server_id: 'e461d6f6-0e57-405f-be15-bdbda35472fa'
-test_public_ip: '15.125.96.210'
-test_server_name: 'spec.dontdelete'
-test_dns_name: 'spec.cdkdev.org'
+#
+# common implementation class for server management under pinas
+module Puppet
+  module PinasCdnHP
+    # HP Provider specific methods
+    # build a compute fog object
+    def get_cdn()
+     if get_provider != nil
+        creds = {
+              :provider => get_provider,
+              :connection_options => get_connection_options
+            }
+        conn = Fog::Storage.new( creds )
+        return conn
+     else
+        raise "Puppet::PinasCdnHP::get_cdn FOG_RC='"+ENV["FOG_RC"]+"' does not define a FOG provider. Check 'forj/provider' declaration."
+        return nil
+     end
+    end
+  end
+end
