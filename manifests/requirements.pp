@@ -64,46 +64,10 @@ class gardener::requirements(
     require: 'Package[fog]'
 "
   }
-  $package_data = $::operatingsystem ? {
-    Ubuntu => parseyaml("
-  dos2unix:
-    ensure: 'latest'
-  libxslt-dev:
-    ensure: 'latest'
-  libxml2-dev:
-    ensure: 'latest'
-  make:
-    ensure: 'latest'
-    require: 'Package[libxslt-dev]'
-  mime-types:
-    ensure: '1.25.1'
-    provider: 'gem18'
-    require: 'Package[make]'
-  nokogiri:
-    ensure: '1.5.11'
-    provider: 'gem18'
-    require:
-     - 'Package[json]'
-     - 'Package[libxml2-dev]'
-     - 'Package[libxslt-dev]'
-  fog:
-    ensure: '1.19.0'
-    provider: 'gem18'
-    require:
-     - 'Package[mime-types]'
-     - 'Package[nokogiri]'
-  excon:
-    ensure: '0.31.0'
-    provider: 'gem18'
-    require: 'Package[mime-types]'
-  json:
-    ensure: 'latest'
-    provider: 'gem18'
-    require: 'Package[excon]'
 
-${hpcloud_package}
-"),
-    CentOS => parseyaml("
+    case $::osfamily {
+      /CentOS|RedHat/: {
+        $gardener_packages    = "
   dos2unix:
     ensure: 'latest'
   libxslt-devel:
@@ -115,33 +79,35 @@ ${hpcloud_package}
     require: 'Package[libxslt-devel]'
   mime-types:
     ensure: '1.25.1'
-    provider: 'gem'
+    provider: 'gem18'
     require: 'Package[make]'
   nokogiri:
     ensure: '1.5.11'
-    provider: 'gem'
+    provider: 'gem18'
     require:
      - 'Package[json]'
      - 'Package[libxml2-devel]'
      - 'Package[libxslt-devel]'
   fog:
     ensure: '1.19.0'
-    provider: 'gem'
+    provider: 'gem18'
     require:
      - 'Package[mime-types]'
      - 'Package[nokogiri]'
   excon:
     ensure: '0.31.0'
-    provider: 'gem'
+    provider: 'gem18'
     require: 'Package[mime-types]'
   json:
     ensure: 'latest'
-    provider: 'gem'
+    provider: 'gem18'
     require: 'Package[excon]'
 
 ${hpcloud_package}
-"),
-    default => parseyaml("
+"
+      }
+      'Debian': {
+        $gardener_packages    = "
   dos2unix:
     ensure: 'latest'
   libxslt-dev:
@@ -178,9 +144,14 @@ ${hpcloud_package}
     require: 'Package[excon]'
 
 ${hpcloud_package}
-"),
+"
+      }
+      default: {
+        fail("Unsupported osfamily: ${::osfamily} The 'gardener' module only supports osfamily Debian, CentOS, or RedHat.")
+      }
+    }
 
-}
+  $package_data = parseyaml($gardener_packages)
   $packages = keys($package_data)
   packages::versioned { $packages:
       data => $package_data,
