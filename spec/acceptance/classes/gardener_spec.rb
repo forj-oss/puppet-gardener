@@ -24,10 +24,10 @@ describe 'gardener define', :long_run => true do
 
       # Run it twice and test for idempotency
       apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
-                          :acceptable_exit_codes => [0,1,2],
+                          :acceptable_exit_codes => [0,2],
                           :catch_failures => true})
       apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
-                          :acceptable_exit_codes => [0,1,2],
+                          :acceptable_exit_codes => [0,2],
                           :catch_changes => true})
 
       expect(shell("gem1.8 list|grep hpcloud").exit_code).to be_zero

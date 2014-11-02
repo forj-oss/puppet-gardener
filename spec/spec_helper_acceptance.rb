@@ -67,13 +67,12 @@ RSpec.configure do |c|
       scp_to host, ENV['FOG_RC'], File.join('','opt','config','fog','cloud.fog')
 
     end
-    CUSTOM_INSTALL_IGNORE = ['.bundle', 
-                             '.git', 
-                             '.idea', 
-                             '.vagrant', 
-                             '.vendor', 
-                             'acceptance', 
-                             'tests', 
+    CUSTOM_INSTALL_IGNORE = ['.bundle',
+                             '.git',
+                             '.idea',
+                             '.vagrant',
+                             '.vendor',
+                             'acceptance',
                              'log',
                              'spec/facter',
                              'spec/acceptance',

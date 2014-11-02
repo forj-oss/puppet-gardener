@@ -14,32 +14,12 @@
 #
 require 'spec_helper_acceptance'
 
-#TODO: need to fix pinascdn for null containers
-#/etc/puppet/modules/gardener/lib/puppet/provider/pinascdn/actions.rb
-#63
-#64        def exists?
-# TODO: need to fix result when cdnservice is nil
-#66          cdnservice = get_cdn_service
-#=> 67          return cdnservice.file_exists(get_remote_dir, get_file_name)
-# TODO: switch default back to true
-describe 'pinascdn', :default => false do
-  describe 'upload file' do
+describe 'pinas type', :long_run => true do
+  describe 'provision server' do
     # Using puppet_apply as a helper
-    fixtures_dir  = 'spec/fixtures/data'
-    fixtures_file = 'my_file.txt'
-    fixtures_data = "#{fixtures_dir}/#{fixtures_file}"
-    cdn_dir = 'fog-rocks'
-    it "should upload #{fixtures_data} to :#{cdn_dir} container" do
-
-      expect(File.exists?(fixtures_data)).to be true
-
+    it 'should create server with no errors' do
       pp = <<-EOS
-        pinascdn {'myPinasCdn':
-                      ensure      => present,
-                      file_name   => '#{fixtures_file}',
-                      remote_dir  => '#{cdn_dir}',
-                      local_dir   => '#{fixtures_dir}',
-                 }
+        include gardener::tests::server_up
       EOS
 
       # Run it twice and test for idempotency
@@ -49,14 +29,12 @@ describe 'pinascdn', :default => false do
       apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
                           :acceptable_exit_codes => [0,2],
                           :catch_changes => true})
-      # TODO: need a test that verifies the file was uploaded.
-      # expect(shell("gem1.8 list|grep hpcloud").exit_code).to be_zero
+
+      expect(shell("gem1.8 list|grep hpcloud").exit_code).to be_zero
     end
-  end
-  describe 'delete file' do
-    it 'should delete my_file.txt from :fog-rocks container' do
+    it 'should create destroy with no errors' do
       pp = <<-EOS
-        include gardener::tests::pinascdn_delete
+        include gardener::tests::server_destroy
       EOS
 
       # Run it twice and test for idempotency
@@ -66,8 +44,8 @@ describe 'pinascdn', :default => false do
       apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
                           :acceptable_exit_codes => [0,2],
                           :catch_changes => true})
-      # TODO: need a test that verifies the file was deleted.
-      # expect(shell("gem1.8 list|grep hpcloud").exit_code).to be_zero
+
+      expect(shell("gem1.8 list|grep hpcloud").exit_code).to be_zero
     end
   end
 end
