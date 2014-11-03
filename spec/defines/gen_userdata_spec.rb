@@ -15,10 +15,8 @@
 
 require 'spec_helper'
 
-describe "apply gen_userdata", :apply => true do
-  context 'with puppet apply' do
-    it "should create ~/mime.txt." do
-      apply("include gardener::tests::gen_userdata").should be(true)
-    end
+describe 'gardener::gen_userdata' do
+  context 'check if errors' do
+    it { should compile }
   end
 end

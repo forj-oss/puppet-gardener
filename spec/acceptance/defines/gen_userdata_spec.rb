@@ -14,25 +14,12 @@
 #
 require 'spec_helper_acceptance'
 
-describe 'pinas type', :long_run => true do
-  describe 'provision server' do
+describe 'gardener:gen_userdata', :long_run => true do
+  describe 'test generate userdata' do
     # Using puppet_apply as a helper
-    it 'should create server with no errors' do
+    it 'should work with no errors' do
       pp = <<-EOS
-        include gardener::tests::server_up
-      EOS
-
-      # Run it twice and test for idempotency
-      apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
-                          :acceptable_exit_codes => [0,2],
-                          :catch_failures => true})
-      apply_manifest(pp, {:modulepath => get_module_path(get_beaker_ext_module_paths),
-                          :acceptable_exit_codes => [0,2],
-                          :catch_changes => true})
-    end
-    it 'should create destroy with no errors' do
-      pp = <<-EOS
-        include gardener::tests::server_destroy
+        include gardener::tests::gen_userdata
       EOS
 
       # Run it twice and test for idempotency
