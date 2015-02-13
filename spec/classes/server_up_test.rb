@@ -22,19 +22,3 @@ describe 'gardener::server_up', :default => true do
     it { should compile }
   end
 end
-
-describe "apply test server up", :apply => true do
-  context 'with puppet apply' do
-    it "should create new server with." do
-      apply("include gardener::tests::server_up").should be(true)
-    end
-  end
-end
-
-describe "apply test server up a second time", :apply => true do
-  context 'with puppet apply' do
-    it "should create new server with." do
-      apply("include gardener::tests::server_up").should be(true)
-    end
-  end
-end

@@ -20,8 +20,8 @@ class gardener::tests::server_up (
   $nodes           = ['serverupnode1'],
   $instance_id     = '42',
   $instance_domain = 'cdkdev.org',
-#  $image_name      = 'Ubuntu Precise 12.04 LTS Server 64-bit 20121026 (b)',
-  $image_name      = 'proto2b',
+  $image_name      = 'Ubuntu Server 12.04.5 LTS (amd64 20140927) - Partner Image',
+#  $image_name      = 'proto2b',
 ) {
   class {'gardener::params':
       image_name   => $image_name,

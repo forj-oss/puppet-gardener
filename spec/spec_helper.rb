@@ -12,13 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-require 'rubygems'
 require 'puppetlabs_spec_helper/module_spec_helper'
-require 'spec_utilities'
+require 'puppet_facts'
 require 'hiera'
+include PuppetFacts
 
-include ::SpecUtilities::Puppet
-include ::SpecUtilities::Exec
+# The default set of platforms to test again.
+ENV['UNIT_TEST_PLATFORMS'] = 'centos-6-x86_64 ubuntu-1404-x86_64'
+PLATFORMS = ENV['UNIT_TEST_PLATFORMS'].split(' ')
+
+#
+# check to see if FOG_RC has a dns section
+#
 def is_dns_enabled?
   begin
     fog = nil
@@ -29,31 +34,12 @@ def is_dns_enabled?
   end
 end
 
-fixture_path = File.expand_path(File.join(__FILE__, '..', 'fixtures'))
-
-# build paths
-
+#
+# configure rspec
+#
 RSpec.configure do |c|
-  c.module_path  = get_module_path
-  puts "[configure/puppet_apply] using modulepath : #{c.module_path}"
-  c.manifest_dir = File.join(fixture_path, 'manifests')
-  puts "[configure/puppet_apply] using manifest_dir : #{c.manifest_dir}"
-  c.config       = "/etc/puppet/puppet.conf"
-  c.hiera_config = 'spec/fixtures/hiera/hiera.yaml'
+    c.formatter = :documentation
+    c.filter_run :default => true
+    c.filter_run :dns => is_dns_enabled?
 end
-
-RSpec.configure do |c|
-#  c.color_enabled = true    option not available...TODO
-  c.tty = true
-  c.formatter = :documentation # :progress, :html, :textmate
-  spec_pp_off = ENV['SPEC_PP_OFF']
-  puts "[configure/puppet_apply] export SPEC_PP_OFF to prevent puppet apply test, currently SPEC_PP_OFF => #{spec_pp_off}"
-  is_run_puppet_apply = ((spec_pp_off == '' || spec_pp_off == nil) ? true : false)
-  puts "[configure/puppet_apply] Running with puppet apply set to #{is_run_puppet_apply}"
-  c.filter_run :apply => is_run_puppet_apply
-  c.filter_run :default => true
-  c.filter_run :dns => is_dns_enabled?
-end
-
-
 

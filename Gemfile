@@ -12,47 +12,29 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-source 'https://rubygems.org'
-
-group(:development, :test) do
-  if ENV.key?('PUPPET_VERSION')
-    puppetversion = "= #{ENV['PUPPET_VERSION']}"
-  else
-    puppetversion = ['2.7.25']
-  end
-  gem 'puppet', puppetversion, :require => false
-  gem 'puppetlabs_spec_helper', '0.5.1'
-  gem 'puppet-lint', '0.3.2'
-  gem 'rake'
-  gem 'ruby-debug'
-  gem 'rspec', "~> 2.10.0", :require => false
+source ENV['GEM_SOURCE'] || "https://rubygems.org"
+# setup : bundle install   or bundle update
+group :development, :test do
+  gem 'debugger',                :require => false
+  gem 'rake',                    :require => false
+  gem 'rspec-puppet',            :require => false
+  gem 'puppetlabs_spec_helper',  :require => false
+  gem 'serverspec',              :require => false
+  gem 'puppet-lint',             :require => false
+  gem 'beaker-rspec',            :require => false
+  gem 'puppet_facts',            :require => false
 end
 
-`puppet resource package build-essential ensure=present`
-`puppet resource package vim ensure=present`
-`puppet resource package git ensure=present`
-`puppet resource package make ensure=present`
-`puppet resource package dos2unix ensure=present`
-`puppet resource package libxslt-dev ensure=present`
-`puppet resource package libxml2-dev ensure=present`
-gem 'mocha','0.12.10'
-gem 'mime-types','1.25.1'
-gem 'excon','0.31.0'
-gem 'json','~>1.7.5'
-gem 'nokogiri','1.5.11'
-gem 'fog', '1.19.0'
-gem 'hpcloud', '2.0.8'
-# HOWTO Install:
-# Install puppet
-# -- /opt/workspace/git/maestro/puppet/install_puppet.sh 
-# Install 3rd party modules
-# -- /opt/workspace/git/maestro/puppet/install_modules.sh 
-# Install hiera
-# -- /opt/workspace/git/maestro/hiera/hiera.sh 
+if facterversion = ENV['FACTER_GEM_VERSION']
+  gem 'facter', facterversion, :require => false
+else
+  gem 'facter', '1.7.6', :require => false
+end
 
-# gem1.8 install bundler --no-rdoc --no-ri
-# bundle install --gemfile .gemfile
+if puppetversion = ENV['PUPPET_GEM_VERSION']
+  gem 'puppet', puppetversion, :require => false
+else
+  gem 'puppet', '2.7.25', :require => false
+end
 
-# Testing:
-# configure cloud.fog file, see README.md
-# rake spec
+

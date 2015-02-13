@@ -22,9 +22,3 @@ describe 'gardener::server_destroy' do
     it { should compile }
   end
 end
-describe "apply test server_destroy", :apply => true do
-  it { apply("include gardener::tests::server_destroy").should be(true) }
-end
-describe "apply test server_destroy second run", :apply => true do
-  it { apply("include gardener::tests::server_destroy").should be(true) }
-end

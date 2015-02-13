@@ -19,7 +19,7 @@ module Pinas
       def get_cdn_service
         @loader = ::Pinas::Cdn::Provider::Loader
         @cdnservice = ::Pinas::Cdn::Provider::Cdn
-        puts @cdnservice.inspect
+        Puppet.debug @cdnservice.inspect
         pinascdn = nil
         begin
           pinascdn = @cdnservice.instance(@loader.get_cdn)
