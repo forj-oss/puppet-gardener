@@ -27,10 +27,10 @@ class gardener::tests::pinascdn_upload (
   } ->
   # Creating a file in Cloud Storage
   pinascdn {'myPinasCdn':
-    ensure      => present,
-    file_name   => $file_name,
-    remote_dir  => $remote_dir,
-    local_dir   => $local_dir,
+    ensure     => present,
+    file_name  => $file_name,
+    remote_dir => $remote_dir,
+    local_dir  => $local_dir,
   }
 
 }

@@ -22,9 +22,9 @@ class gardener::tests::pinascdn_delete (
 
   # Deleting a file in Cloud Storage
   pinascdn {'myPinasCdnDelete':
-    ensure      => absent,
-    file_name   => $file_name,
-    remote_dir  => $remote_dir,
+    ensure     => absent,
+    file_name  => $file_name,
+    remote_dir => $remote_dir,
   }
 
 }

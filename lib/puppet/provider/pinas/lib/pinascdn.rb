@@ -29,7 +29,8 @@ module Puppet
         @@pinas ||= self.new(comm)
         return @@pinas
       end
-  
+
+
       #  initialize
       def initialize(comm)
         @cdn = comm
@@ -53,11 +54,11 @@ module Puppet
         dir = getContainer(target)
 
         if dir.nil?
-          #Create a directory     
+          #Create a directory
           dir = @cdn.directories.create(
             :key    => target, # globally unique name
             :public => true
-          )     
+          )
           Puppet.debug "Directory created: #{target}"
           dir = @cdn.directories.get(target)
         end
@@ -67,8 +68,8 @@ module Puppet
           :key    => name,
           :body   => File.open("#{source}/#{name}"),
           :public => false
-        )      
-        
+        )
+
         Puppet.debug "File uploaded!"
       end
 
@@ -80,13 +81,14 @@ module Puppet
 
         if dir.nil?
           Puppet.warning "Puppet::PinasCdn::file_unlink: Container doesnt exist (#{target})."
-        else        
-          file = dir.files.get(name)
-          if file.nil?
-            Puppet.warning "Puppet::PinasCdn::file_unlink: File doesnt exist (#{name})."
-          else 
+        else
+          if dir.files.head(name)
+            # 'new' method does not download the file from Object Storage
+            file = dir.files.new(:key => name)
             file.destroy
             Puppet.debug "Deleted!"
+          else
+            Puppet.warning "Puppet::PinasCdn::file_unlink: #{target}/#{name} doesnt exist."
           end
         end
       end
@@ -100,13 +102,10 @@ module Puppet
         if dir.nil?
           Puppet.debug "Container doesn't exist: #{target}"
         else
-          file = dir.files.get(name)
-          if file.nil?
-            Puppet.debug "File doesn't exist: #{name}"
-          else
-            r = true
-          end
+          r = dir.files.head(name) ? true : false
+          Puppet.debug "#{target}/#{name} exists ? #{r}"
         end
+
         return r
       end
 
