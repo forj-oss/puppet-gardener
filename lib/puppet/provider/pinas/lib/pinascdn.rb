@@ -17,7 +17,7 @@
 require 'fog' if Puppet.features.fog?
 require 'json' if Puppet.features.json?
 require 'erb'
-#TODO: This class brings together network and compute, we may need to break these out down the line.
+# TODO: This class brings together network and compute, we may need to break these out down the line.
 module Puppet
   module Pinas
     class Cdn
@@ -48,13 +48,43 @@ module Puppet
       end
 
 
-      #Uploads a file to object storage
+      def cleanup(target, files_to_keep)
+        if files_to_keep != nil and files_to_keep.to_i > 0
+          Puppet.debug "Cleanup of #{target}, leaving #{files_to_keep} files"
+          dir = getContainer(target)
+
+          # Verify if the container exists
+          if dir.nil?
+            puts "Container doesn't exist"
+          else
+            # From old to new
+            files = dir.files.sort_by {|file| file.last_modified}  
+
+            # From new to old
+            files.reverse!
+
+            counter = 0
+            files.each do |file|
+              counter += 1
+
+              if counter > files_to_keep.to_i
+                Puppet.debug "Deleting #{file.key}"
+                file.destroy
+                Puppet.debug "Deleted!"
+              end
+            end
+          end
+        end
+      end
+
+
+      # Uploads a file to object storage
       def file_upload(source, target, name)
         Puppet.debug "Uploading #{source}/#{name} to #{target}"
         dir = getContainer(target)
 
         if dir.nil?
-          #Create a directory
+          # Create a directory
           dir = @cdn.directories.create(
             :key    => target, # globally unique name
             :public => true
@@ -63,7 +93,7 @@ module Puppet
           dir = @cdn.directories.get(target)
         end
 
-        #Uploads the file
+        # Uploads the file
         file = dir.files.create(
           :key    => name,
           :body   => File.open("#{source}/#{name}"),
@@ -74,7 +104,7 @@ module Puppet
       end
 
 
-      #Deletes a file from object storage
+      # Deletes a file from object storage
       def file_unlink(target, name)
         Puppet.debug "Deleting #{target}/#{name}"
         dir = getContainer(target)
@@ -94,7 +124,7 @@ module Puppet
       end
 
 
-      #Verifies if a file exists in object storage
+      # Verifies if a file exists in object storage
       def file_exists(target, name)
         r = false
         dir = getContainer(target)

@@ -48,9 +48,16 @@ module Pinas
       end
 
 
+      # lookup recordd_type for type
+      def get_files_to_keep
+        return @resource[:files_to_keep]
+      end
+
+
       def create
-          cdnservice = get_cdn_service
-          cdnservice.file_upload(get_local_dir, get_remote_dir, get_file_name)
+        cdnservice = get_cdn_service
+        cdnservice.file_upload(get_local_dir, get_remote_dir, get_file_name)
+        cdnservice.cleanup(get_remote_dir, get_files_to_keep)
       end
 
 

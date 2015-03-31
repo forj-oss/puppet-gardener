@@ -24,10 +24,11 @@ Puppet::Type.newtype(:pinascdn) do
             include gardener::requirements
 
             pinascdn {'myPinasCdn':
-                ensure      => present,
-                file_name   => 'sample.txt',
-                remote_dir  => 'my-cloud-container',
-                local_dir   => '/tmp',
+                ensure        => present,
+                file_name     => 'sample.txt',
+                remote_dir    => 'my-cloud-container',
+                local_dir     => '/tmp',
+                files_to_keep => 3,
               }
 
             pinascdn {'myPinasCdnDelete':
@@ -53,6 +54,10 @@ Puppet::Type.newtype(:pinascdn) do
 
   newparam(:local_dir) do
     desc "Local directory (Unix format)"
+  end
+
+  newparam(:files_to_keep) do
+    desc "Optional parameter, keeps n files on object storage"
   end
 
 end
