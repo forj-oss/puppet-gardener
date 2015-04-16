@@ -18,17 +18,19 @@
 
 # https://docs.hpcloud.com/bindings/fog/compute
 
+# Next should be removed if lorj_cloud is loaded.
 require 'fog' if Puppet.features.fog?
 require 'json' if Puppet.features.json?
-require 'puppet/provider/pinas/loader' if Puppet.features.pinas?
-require 'puppet/provider/pinas/actions' if Puppet.features.pinas?
+require 'puppet/provider/pinas/lib/loader' if Puppet.features.pinas?
+require 'puppet/provider/pinas/lib/actions' if Puppet.features.pinas?
 
 Puppet::Type.type(:pinas).provide :compute do
-  desc "Creates cloud compute nodes for Gardner."
+  desc "Creates cloud compute nodes for Gardener directly with FOG."
+  defaultfor :cloud_provider => :compute
   confine :feature => :fog
   confine :feature => :json
   confine :feature => :pinas
+  confine :feature => :fog_credentials
   include ::Pinas::Compute::Actions
   include ::Pinas::Compute::Provider
 end
-

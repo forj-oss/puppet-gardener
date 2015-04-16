@@ -88,8 +88,14 @@ class gardener::requirements(
      - 'Package[json]'
      - 'Package[libxml2-devel]'
      - 'Package[libxslt-devel]'
+  lorj_cloud:
+    ensure: 'latest'
+    provider: 'gem18'
+    require:
+     - 'Package[mime-types]'
+     - 'Package[nokogiri]'
   fog:
-    ensure: '1.19.0'
+    ensure: '1.30.0'
     provider: 'gem18'
     require:
      - 'Package[mime-types]'
@@ -128,8 +134,14 @@ ${hpcloud_package}
      - 'Package[json]'
      - 'Package[libxml2-dev]'
      - 'Package[libxslt-dev]'
+  lorj_cloud:
+    ensure: 'latest'
+    provider: 'gem18'
+    require:
+     - 'Package[mime-types]'
+     - 'Package[nokogiri]'
   fog:
-    ensure: '1.19.0'
+    ensure: '1.30.0'
     provider: 'gem18'
     require:
      - 'Package[mime-types]'

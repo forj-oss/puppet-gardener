@@ -24,69 +24,40 @@ def checkdebug
   end
 end
 
-require 'fog'      if Puppet.features.fog?
-require "puppet/provider/pinas/loader" if Puppet.features.pinas?
+#  require 'ruby-debug' ; Debugger.start
+
+if Puppet.features.lorj_ready?
+  require 'lorj_cloud'
+  require "puppet/provider/pinas/lib/lorj"
+end
+
+if Puppet.features.fog_ready?
+  require 'fog'                              if Puppet.features.fog?
+  require "puppet/provider/pinas/lib/loader" if Puppet.features.pinas?
+end
 
 include ::Puppet::Forj::Facter if Puppet.features.factercache?
 
 Facter.add("compute_public_ip") do
   setcode do
+    prefix = 'Facter compute_public_ip: '
     res = (!Puppet.features.factercache?) ? nil : Cache.instance().cache("compute_public_ip") do
       checkdebug
-      compute_public_ip = String.new
-      isready = true
       begin
-        server_id = Facter.value('compute_id_lookupbyip')
-        if (server_id == nil or server_id == '') and isready == true
-          Facter.warn "unable to continue without compute_id_lookupip facter"
-          isready = false
-        end
-        Facter.debug "looking up compute public ip with #{server_id}"
+        ::Puppet::LorjCloud.lorj_initialize
+        config = ::Lorj::Config.new
 
-        # verify fog libraries can be loaded
-        if !Puppet.features.fog? and isready == true
-          Facter.warn "fog not loaded, compute_public_ip empty"
-          isready = false
+        if Puppet.features.lorj_ready?
+          compute_public_ip = ::Puppet::Lorj::Facter.get_compute_public_ip(prefix)
         end
-
-        # verify pinas common lib is available
-        if !Puppet.features.pinas? and isready == true
-          Facter.warn "pinas common lib unavailable."
-          isready = false
+        if Puppet.features.fog_ready?
+          compute_public_ip = ::Puppet::Pinas::Facter.get_compute_public_ip(prefix)
         end
-
-        # verify fog_rc file found
-        if !Puppet.features.fog_credentials? and isready == true
-          Facter.warn "fog_credentials unavailable, set FOG_RC"
-          isready = false
-        end
-
-        if isready == true
-          # load the compute object
-          @loader = ::Pinas::Compute::Provider::Loader
-          if @loader.get_provider == nil and isready == true
-            Facter.warn "Pinas fog configuration missing."
-            isready = false
-          end
-        end
-        if isready == true
-          Facter.debug "using provider #{@loader.get_provider}"
-
-        # compute service
-          @compute_service = ::Pinas::Compute::Provider::Compute
-          pinascompute = @compute_service.instance(@loader.get_compute)
-          compute_public_ip = pinascompute.server_get_public_ip(server_id)
-          compute_public_ip = :undefined if compute_public_ip == ""
-        else
-          compute_public_ip = :undefined
-        end
-
+        compute_public_ip
       rescue Exception => e
-        Facter.warn("compute_public_ip failed, #{e}")
-        compute_public_ip = :undefined
+        Facter.warn(prefix + "compute_public_ip failed, #{e}")
+        :undefined
       end
-      compute_public_ip
     end
   end
 end
-

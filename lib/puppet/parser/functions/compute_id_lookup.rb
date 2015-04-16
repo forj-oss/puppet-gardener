@@ -13,12 +13,26 @@
 #   limitations under the License.
 #
 
+# To learn about puppet new functions, read:
+# https://docs.puppetlabs.com/guides/custom_functions.html
+#
+# To test this function, simply call it like that:
+# $ pp -e 'notice(compute_id_lookup("myserver"))'
+
 # load relative libraries
 __LIB_DIR__ = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift __LIB_DIR__ unless $LOAD_PATH.include?(__LIB_DIR__)
 
-require 'fog'      if Puppet.features.fog?
-require "puppet/provider/pinas/loader" if Puppet.features.pinas?
+if Puppet.features.lorj_config?
+  require 'lorj_cloud'
+  require "puppet/provider/pinas/lib/lorj"
+end
+
+require 'fog' if Puppet.features.fog?
+if Puppet.features.pinas?
+  require "puppet/provider/pinas/lib/loader"
+  require 'puppet/provider/pinas/lib/parser'
+end
 
 module Puppet::Parser::Functions
   newfunction(:compute_id_lookup, :type => :rvalue, :doc => <<-EOS
@@ -31,17 +45,17 @@ To configure the fog provider a the following file must be present:
   The path to the file can be controlled with environment argument FOG_RC.
   ie; export FOG_RC=/root/.fog/cloud.fog
 
-  Provider definitions depend on the cloud version and provider you are 
+  Provider definitions depend on the cloud version and provider you are
   currently using.
-  
+
   The default provider is used for compute resource lookups.
 
 *Arguments:*
-  compute_name     : This can be an id, or regular expression like 
+  compute_name     : This can be an id, or regular expression like
                       /maestro.*/
 
 *Examples:*
- 
+
   compute_id_lookup( /maestro.*/ )
 
 returns : XXXXXXX-XXXX-XXXX-XXXXXX
@@ -50,66 +64,10 @@ When a compute resource is not found, the return value is ''
 
     EOS
    ) do |args|
-       Puppet.debug "in compute_id_lookup.."
-       unless  Puppet.features.fog?
-         Puppet.warning "unable to continue, fog libraries are not ready, try running:
-                       puppet agent --tags 'gardener::requirements'
-                       or 
-                       puppet apply --modulepath=\$PUPPET_MODULES -e 'include gardener::requirements'
-                       returning false and skipping."
-         return nil
-       end
+       prefix = 'ParserFunction compute_id_lookup: '
+       Puppet.debug prefix + "start up"
 
-       unless Puppet.features.pinas?
-         Puppet.warning "Pinas common libraries unavailable, skip for this run."
-         return nil
-       end
-
-       # check for FOG_RC
-       unless Puppet.features.fog_credentials?
-         Puppet.warning "fog_credentials unavailable, skip for this run."
-         return nil
-       end
-
-       @loader = ::Pinas::Compute::Provider::Loader
-       unless @loader.get_provider != nil
-         Puppet.warning "Pinas fog configuration missing."
-         return nil
-       end
-
-       if (args.size != 1) then
-          raise(Puppet::ParseError, "compute_id_lookup: Wrong number of arguments "+
-            "given #{args.size} for 1")
-       end
-       
-       # determine if this is a regex string or not, if so convert @compute_name
-       @compute_name = args[0]
-       if @compute_name.sub(/(^\/)(.*)(\/$)/,'\1\3') == '//'
-         @compute_name = Regexp.new(@compute_name.sub(/(^\/)(.*)(\/$)/,'\2'))
-         Puppet.debug "performing regex search #{@compute_name.inspect}, class => #{@compute_name.class}"
-       end
-       
-       @compute_service = ::Pinas::Compute::Provider::Compute
-       
-       begin
-        Puppet.debug("checking if compute node exist ( #{@compute_name} ) exists.")
-        pinascompute = @compute_service.instance(@loader.get_compute)
-        Puppet.debug  "got compute object."
-       rescue Exception => e
-         Puppet.err "unable to get compute service for #{@compute_name}"
-         Puppet.err "#{e}"
-         raise "unable to get compute service for #{@compute_name}, error #{e}"
-       end
-       # determin the compute id
-       compute_id = ''
-       begin
-         compute = pinascompute.get_compute(@compute_name)
-         if compute != nil
-           compute_id = compute.id
-         end    
-       rescue Exception => e
-         Puppet.warning "Problem getting compute, #{e} "
-       end
-       return compute_id
+       ::Puppet::Pinas::Parser.compute_id_lookup(prefix, args) if Puppet.features.fog_ready?
+       ::Puppet::Lorj::Parser.compute_id_lookup(prefix, args) if Puppet.features.lorj_ready?
     end
 end

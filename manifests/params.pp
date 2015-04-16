@@ -20,9 +20,9 @@
 
 class gardener::params (
   # can also be 'Ubuntu Precise 12.04 LTS Server 64-bit 20121026 (b)'
-  $image_name         = '48335',
+  $image_name         = 'ubuntu-12.04-server-cloudimg-amd64',
   # can also be a number like 100
-  $flavor_name        = 'standard.xsmall',
+  $flavor_name        = 'm1.medium',
   $key_name           = 'nova',
   $security_groups    = ['default'],
   # by default gardener always installs puppet and default configuration
@@ -30,13 +30,13 @@ class gardener::params (
   $template_userdata  = '/tmp/mime.txt',
   $template_metadata  = nil,
   $network_name       = '',
-  $cloud_provider     = compute,   # pinas defaults to using compute implementation for cloud connection
 ) {
-  # pinas credential
-  # ChL: Credential are now stored under a /root/.fog.
-  # But we need to select the fog provider to interpret the .fog
-  # correctly.
 
+    # Following template data are REQUIRED if using Openstack/FOG
+    # Using Lorj, /opt/config/lorj/accounts/*.yaml contains
+    # all of these data.
+    # But note that those template setting replace data coming from
+    # Lorj account file.
     $template = {
                   image_name      => $image_name,
                   flavor_name     => $flavor_name,

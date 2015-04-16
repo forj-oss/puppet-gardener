@@ -17,6 +17,7 @@
 
 if Puppet.features.pinas?
   require 'puppet/provider/pinas/lib/common'
+  require 'puppet/provider/pinas/lib/parser'
   require 'puppet/provider/pinas/lib/manager/provider'
   require 'puppet/provider/pinas/lib/pinascompute'
 end
@@ -45,12 +46,12 @@ module Pinas
             require 'puppet/provider/pinas/lib/network/hp'
             extend ::Puppet::PinasComputeHP
             extend ::Puppet::PinasNetworkHP
-            
+
             Puppet.debug "loadded Pinas::Compute::Provider::Loader for #{get_provider}"
           else
             Puppet.warning "Pinas::Compute::Provider::Loader fog provider not defined. Loader loaded partially."
           end
-          
+
         end
 
         def initialize
@@ -59,5 +60,3 @@ module Pinas
     end
   end
 end
-
-

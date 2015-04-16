@@ -14,8 +14,32 @@
 #
 # a new type to work with garnder server nodes using fog api
 # current goal is to provision a server with hp cloud
-# we call this pinas because garnder's role is to create more nodes like 
+# we call this pinas because garnder's role is to create more nodes like
 # the agave pina
+
+# Provider code behavior is explained by example here:
+# https://docs.puppetlabs.com/guides/complete_resource_example.html
+#
+# Check also about https://docs.puppetlabs.com/guides/custom_types.html
+#
+
+# Currently this type support 2 providers
+# - Openstack via FOG (:compute)
+# - lorj_cloud (:lorj)
+#
+# If Lorj account file exist, it will disable :compute provider and activate :lorj
+# If Only FOG file exist, only :compute provider will be activated.
+# If none of them exist, no provider are activated.
+# This logic has been implemented for a smooth transition from Openstack/fog to Lorj_cloud
+#
+# The choice is made by a Facter 'cloud_provider' which will select :compute or :lorj
+# This facter must be passed as :provider argument to the pinas Custom type.
+#
+# For Maestro built on a cloud, metadata will determine which option will be used.
+# Note that DNS management is still using HPCloud cli library, until lorj_cloud process
+# implement it.
+#
+# ChL - (chrisssss#forj)
 
 Puppet::Type.newtype(:pinas) do
   @doc = %q{Creates a new server node for gardener
@@ -24,7 +48,7 @@ Puppet::Type.newtype(:pinas) do
 
         Example:
             include gardener::requirements
-            
+
             $template = {
                   image_name      => '',
                   flavor_name     => '',
@@ -45,7 +69,7 @@ Puppet::Type.newtype(:pinas) do
       }
 
   ensurable
-  
+
 # currently not really used, placeholder for what we do that is blueprint specific
 # ie; naming schema, etc.
   newparam(:name) do
@@ -63,7 +87,7 @@ Puppet::Type.newtype(:pinas) do
 #    desc "blueprint name."
 #    defaultto :fog
 #  end
-#  
+#
 # setup domain
   newparam(:domain) do
     desc "domain name of the nodes."
@@ -74,7 +98,7 @@ Puppet::Type.newtype(:pinas) do
     desc "seconds to wait before create."
     validate do |value|
       unless value =~ /\A[-+]?[0-9]*\.?[0-9]+\Z/
-         raise ArgumentError, "%s not a number, fix delay arugment." % value
+         raise ArgumentError, "%s not a number, fix delay argument." % value
       end
     end
   end
@@ -96,12 +120,18 @@ Puppet::Type.newtype(:pinas) do
       template
     end
   end
-  
+
   newparam(:do_parallel) do
     desc "Execute parallel actions on all nodes."
     newvalues(:true, :false)
   end
-  
 
+  # This parameter has been added to help puppet manage
+  # the Lorj Cloud configuration file.
+  # By default we set it to the facter :lorj_config
 
+  # Currently Gardener do not support multiple conf.
+  newparam(:conf) do
+    desc "Cloud Configuration file"
+  end
 end

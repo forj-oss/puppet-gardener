@@ -26,7 +26,7 @@ module Pinas
         self.each { |k,v|
           k = 'hash_id' if k.to_s == 'id' # avoid depricated object error
           k = 'hash_type' if k.to_s == 'type' # avoid depricated object error
-          return v if k.to_s.to_sym == name 
+          return v if k.to_s.to_sym == name
         }
         super.method_missing name
       end
@@ -37,6 +37,7 @@ module Pinas
       found = []
       collection.each do |single|
         is_found = false
+        Puppet.debug "match? #{single.name}"
         if single.is_a?(Hash)
           is_found = ((single != nil ) && (single.hash_id.to_s == name.to_s || single.name == name  || name.is_a?(Regexp) && name =~ single.name ))
         else
@@ -69,7 +70,7 @@ module Pinas
        options[:connect_timeout] = timeout
        options[:read_timeout]    = timeout
        options[:write_timeout]   = timeout
-      end 
+      end
       if proxy != nil
         options[:proxy] = proxy
         #TODO: investigate ssl cert verify
@@ -77,7 +78,7 @@ module Pinas
         if uri.scheme == "https"
           options[:ssl_verify_peer] = false
         end
-      end 
+      end
       return options
     end
 
@@ -100,6 +101,19 @@ module Pinas
         return false if val == false || val =~ (/(false|f|no|n|0)$/i)
         raise ArgumentError.new("invalid value for Boolean: \"#{val}\"")
     end
+
+    # Code used to decompose the hostname in host + instance.
+    # We assume '<server>.<instance>' format
+    # If not detected, server_id and server_host are empty.
+    def self.extract_instance_id_from(server_name)
+      server_id=''
+      server_host=''
+      pat = server_name.scan(/^((.*)\.([a-z0-9]{1,}))/).flatten.compact
+      if pat.length == 3  and pat[1] != '' and pat[1] != nil
+           server_id = pat[2] if pat[2] != '' and pat[2] != nil
+           server_host = pat[1] if pat[1] != '' and pat[1] != nil
+      end
+      [server_id, server_host]
+    end
   end
 end
-  

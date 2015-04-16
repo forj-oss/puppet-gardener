@@ -13,6 +13,11 @@
 #   limitations under the License.
 #
 # actions that the custom type will take
+
+# You can also uncomment the next line and add a 'debugger' in the ruby code
+# where you want to debug. You may need to install gem1.8 install ruby-debug.
+#  require 'ruby-debug' ; Debugger.start
+
 module Pinas
   module Compute
     module Actions
@@ -22,7 +27,7 @@ module Pinas
           @loader = ::Pinas::Compute::Provider::Loader
           @computeservice = ::Pinas::Compute::Provider::Compute
           pinas = @computeservice.instance(@loader.get_compute, @loader.get_network(@resource[:server_template]))
-          
+
           do_threaded = pinas.to_bool(@resource[:do_parallel].to_s)
           delay = @resource[:delay]
           if do_threaded
@@ -55,15 +60,15 @@ module Pinas
           end
           Puppet.debug "done with create"
       end
-  
+
     # destroy an existing server
       def destroy
           @loader = ::Pinas::Compute::Provider::Loader
           @computeservice = ::Pinas::Compute::Provider::Compute
           network_name = @loader.get_network_name(@resource[:server_template])
           @networkservice = (network_name != nil ) ? @loader.get_network(@resource[:server_template]) : nil
-          pinas = @computeservice.instance(@loader.get_compute, @networkservice) 
-          
+          pinas = @computeservice.instance(@loader.get_compute, @networkservice)
+
           do_threaded = pinas.to_bool(@resource[:do_parallel].to_s)
           if do_threaded
             thread_destroys = []
@@ -92,7 +97,7 @@ module Pinas
           end
           Puppet.debug "done with destroy"
       end
-  
+
     # check if a server exist
       def exists?
          # TODO: network_name should be defaulted, but we havn't found how to do that in a type definition.
@@ -101,9 +106,9 @@ module Pinas
         network_name = @loader.get_network_name(@resource[:server_template])
         @networkservice = (network_name != nil ) ? @loader.get_network(@resource[:server_template]) : nil
         pinas = @computeservice.instance(@loader.get_compute, @networkservice)
-  
+
         Puppet.notice "checking if nodes #{@resource[:nodes]} exist."
-  
+
         @resource[:nodes].each do |server|
             server_name = get_servername(server)
             server_found = pinas.server_exist?(server_name)
@@ -112,8 +117,7 @@ module Pinas
          Puppet.notice "all nodes found, for instance : #{@resource[:instance_id]}"
          return true
       end
-  
+
     end
   end
 end
-  

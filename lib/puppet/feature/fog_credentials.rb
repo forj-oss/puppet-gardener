@@ -17,22 +17,23 @@ require 'yaml'
 Puppet.features.add(:fog_credentials) do
   begin
     # lib
+    prefix = "Feature fog_credentials: "
     Puppet.features.add(:yaml, :libs => ["yaml"])  # we flip on yaml configuration.
-    Puppet.debug "yaml feature added"
-    if ENV["FOG_RC"].nil? 
-             ENV["FOG_RC"]="/opt/config/fog/cloud.fog"
+    Puppet.debug prefix + "yaml feature added"
+    if ENV["FOG_RC"].nil?
+      ENV["FOG_RC"]="/opt/config/fog/cloud.fog"
     end
     fog_rc=ENV["FOG_RC"]
-    Puppet.debug "enabling feature check for fog_credentials on fog file => #{fog_rc}"
     if File.exist?(fog_rc)
-      cloud_info=YAML.load_file(fog_rc)
-      Puppet.debug "fog_credentials will be enabled with #{fog_rc}"
+      Puppet.debug prefix + "Found #{fog_rc}"
+      isok = true
     else
-      Puppet.warning "fog_credentials feature will not be enabled due to missing cred file: #{fog_rc}, set this with export FOG_RC."
+      Puppet.warning prefix + "Disabled. Missing cred file: #{fog_rc}, set this with export FOG_RC."
+      isok = false
     end
-    true
+    isok
   rescue Exception => err
-    Puppet.warning "Problem with checking for feature fog_credentials: #{err}"
+    Puppet.warning prefix + "Problem with checking for feature fog_credentials: #{err}"
     false
   end
 end

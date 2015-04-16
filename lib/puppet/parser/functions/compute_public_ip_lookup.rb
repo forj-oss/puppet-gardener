@@ -13,12 +13,24 @@
 #   limitations under the License.
 #
 
+# You can also uncomment the next line and add a 'debugger' in the ruby code
+# where you want to debug. You may need to install gem1.8 install ruby-debug.
+#  require 'ruby-debug' ; Debugger.start
+
 # load relative libraries
 __LIB_DIR__ = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift __LIB_DIR__ unless $LOAD_PATH.include?(__LIB_DIR__)
 
-require 'fog'      if Puppet.features.fog?
-require "puppet/provider/pinas/loader" if Puppet.features.pinas?
+if Puppet.features.lorj_ready?
+  require 'lorj_cloud'
+  require "puppet/provider/pinas/lib/lorj"
+end
+
+#  debugger
+if Puppet.features.fog_ready?
+  require 'fog'                              if Puppet.features.fog?
+  require "puppet/provider/pinas/lib/loader" if Puppet.features.pinas?
+end
 
 module Puppet::Parser::Functions
   newfunction(:compute_public_ip_lookup, :type => :rvalue, :doc => <<-EOS
@@ -29,9 +41,9 @@ To configure the fog provider a the following file must be present:
   The path to the file can be controlled with environment argument FOG_RC.
   ie; export FOG_RC=/root/.fog/cloud.fog
 
-  Provider definitions depend on the cloud version and provider you are 
+  Provider definitions depend on the cloud version and provider you are
   currently using.
-  
+
   The default provider is used for compute resource lookups.
 
 *Arguments:*
@@ -39,7 +51,7 @@ To configure the fog provider a the following file must be present:
                       resource.
 
 *Examples:*
- 
+
   compute_public_ip_lookup( 'pinasnode1' )
 
 returns : '15.X.X.X'
@@ -48,50 +60,10 @@ When a compute resource is not found, the return value is ''
 
     EOS
    ) do |args|
-       Puppet.debug "in compute_public_ip_lookup.."
-       unless  Puppet.features.fog?
-         Puppet.warning "unable to continue, fog libraries are not ready, try running:
-                       puppet agent --tags 'gardener::requirements'
-                       or 
-                       puppet apply --modulepath=\$PUPPET_MODULES -e 'include gardener::requirements'
-                       returning nil and skipping."
-         return :undefined
-       end
+       prefix = 'ParserFunction compute_public_ip_lookup: '
+       Puppet.debug prefix + "in compute_public_ip_lookup.."
 
-       unless Puppet.features.pinas?
-         Puppet.warning "Pinas common libraries unavailable, skip for this run."
-         return :undefined
-       end
-
-       # check for FOG_RC
-       unless Puppet.features.fog_credentials?
-         Puppet.warning "fog_credentials unavailable, skip for this run."
-         return :undefined
-       end
-
-       @loader = ::Pinas::Compute::Provider::Loader
-       unless @loader.get_provider != nil
-         Puppet.warning "Pinas fog configuration missing."
-         return :undefined
-       end
-
-       if (args.size != 1) then
-          raise(Puppet::ParseError, "compute_public_ip_lookup: Wrong number of arguments "+
-            "given #{args.size} for 1")
-       end
-
-       @compute_name = args[0]
-
-       @compute_service = ::Pinas::Compute::Provider::Compute
-
-       begin
-        Puppet.debug("checking if compute node exist ( #{@compute_name} ) exists.")
-        pinascompute = @compute_service.instance(@loader.get_compute)
-        Puppet.debug  "got compute object."
-       rescue Exception => e
-         Puppet.err "unable to get compute service for #{@compute_name}"
-         raise "unable to get compute service for #{@compute_name}, error #{e}"
-       end
-       return pinascompute.server_get_public_ip(@compute_name)
+       ::Puppet::Pinas::Parser.compute_public_ip_lookup(prefix, args) if Puppet.features.fog_ready?
+       ::Puppet::Lorj::Parser.compute_public_ip_lookup(prefix, args) if Puppet.features.lorj_ready?
     end
 end

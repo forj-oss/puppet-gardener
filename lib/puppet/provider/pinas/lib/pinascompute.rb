@@ -14,6 +14,8 @@
 #
 # driver class for fog
 
+#  require 'ruby-debug' ; Debugger.start
+
 require 'fog' if Puppet.features.fog?
 require 'json' if Puppet.features.json?
 require 'erb'
@@ -29,13 +31,13 @@ module Puppet
         @@pinas.network = network if @@pinas.network == nil and network != nil # refresh the network object when provided.
         return @@pinas
       end
-  
+
       #  initialize
       def initialize(comm, network = nil)
         @compute = comm
         @network = network
       end
-  
+
       # check if server exist in compute
       def server_exist?(server_name)
         compute = find_match(@compute.servers, server_name)
@@ -43,20 +45,15 @@ module Puppet
         Puppet.debug "server not found : #{server_name}" if compute == nil
         return (compute != nil)
       end
-  
+
       # create a server
       # TODO: Implement a fog provider mapping. Ex: flavor_ref(openstack) = flavor_id(hpcloud)
       def server_create(server_name, template)
         # calculate instance id
-        server_id=''
-        server_host=''
         Puppet.debug "template keys => " + JSON.pretty_generate(template)
-        pat = server_name.scan(/^((.*)\.([a-z0-9]{1,}))/).flatten.compact
-        if pat.length == 3  and pat[1] != '' and pat[1] != nil
-             server_id = pat[2] if pat[2] != '' and pat[2] != nil
-             server_host = pat[1] if pat[1] != '' and pat[1] != nil
-        end
-  
+
+        server_id, server_host = ::Pinas::Common.extract_instance_id_from(server_name)
+
         # 1. setup the default options
         options = {
                 :name => server_name,
@@ -125,7 +122,7 @@ module Puppet
            Puppet.crit "servers.create Error: #{e}"
            raise Puppet::Error, "Error : #{e}"
         end
-  
+
         Puppet.notice "server created #{server_name} on net #{template[:network_name]} "
         begin
           newserver_ip_assign(new_server)
@@ -133,7 +130,7 @@ module Puppet
           Puppet.crit "server_ip_assign Error: #{e}"
           raise Puppet::Error, "Error : #{e}"
        end
-  
+
       end
       # get the public ip of the server
       def server_get_public_ip(server_name)
@@ -197,7 +194,7 @@ module Puppet
             network_name = server.addresses.keys.reduce
           else
             raise Puppet::Error, "Server has no network connections"
-          end  
+          end
           if addresses[network_name].count < 2
           # check if already assigned
             new_ip = nil
@@ -233,7 +230,7 @@ module Puppet
           else
             Puppet.warning "falling back to default network"
             network_name = 0 # HACK HACK HACK
-          end  
+          end
           if addresses[network_name].count < 2
           # check if already assigned
             new_ip = nil
@@ -277,7 +274,7 @@ module Puppet
         if ext_net != nil
            Puppet.debug "using #{ext_net.name}"
            ext_net_id = ext_net.id
-           #TODO: consider creating options for the hash below so we can 
+           #TODO: consider creating options for the hash below so we can
            # provide more flexiblity in external network config.
            hsh = {
                       #:tenant_id           => server.tenant_id
@@ -332,7 +329,7 @@ module Puppet
         end
         return h_kp
       end
-  
+
       # TODO: move to common
       def meta_to_json(str)
         key_pairs = str.split(',')
@@ -345,7 +342,7 @@ module Puppet
         end
         return h_kp.to_json
       end
-  
+
       # destroy server
       def server_destroy(server_name)
         Puppet.notice "destroying server : #{server_name}\n"
@@ -358,7 +355,7 @@ module Puppet
           Puppet.notice "server was not found..."
         end
       end
-  
+
       # get server_id from name
       # DEPRICATE: Use find_match in common.rb
       def server_id(server_name)
@@ -381,7 +378,7 @@ module Puppet
         end
         return flavor_to_use
       end
-  
+
       # return the network_id from the server_template[:network_name]
       # network.networks[2].name  but with Fog::Network
       def get_networkid(network_name)
@@ -395,7 +392,7 @@ module Puppet
         end
         return network_to_use
       end
-  
+
     # return the image_id from the server_template[:image_name]
       def get_image(image_name)
         image_res = find_match(@compute.images, image_name)
@@ -408,9 +405,101 @@ module Puppet
         end
         return image_to_use
       end
+
       # get a compute
       def get_compute(compute_name_id)
         return find_match(@compute.servers, compute_name_id)
+      end
+    end
+
+    module Facter
+      # Facter 'compute_public_ip'
+      def self.get_compute_public_ip(prefix)
+        compute_public_ip = String.new
+
+        server_id = ::Facter.value('compute_id_lookupbyip')
+        if (server_id == nil or server_id == '')
+          ::Facter.warn prefix + "unable to continue without compute_id_lookupip facter"
+          return :undefined
+        end
+        ::Facter.debug prefix + "looking up compute public ip with #{server_id}"
+
+        # verify fog libraries can be loaded
+        if !Puppet.features.fog?
+          ::Facter.warn prefix + "fog not loaded, compute_public_ip empty"
+          return :undefined
+        end
+
+        # verify pinas common lib is available
+        if !Puppet.features.pinas?
+          ::Facter.warn prefix + "pinas common lib unavailable."
+          return :undefined
+        end
+
+        # verify fog_rc file found
+        if !Puppet.features.fog_credentials?
+          ::Facter.warn prefix + "fog_credentials unavailable, set FOG_RC"
+          return :undefined
+        end
+
+        # load the compute object
+        @loader = ::Pinas::Compute::Provider::Loader
+        if @loader.get_provider == nil and isready == true
+          ::Facter.warn prefix + "Pinas fog configuration missing."
+          return :undefined
+        end
+
+        ::Facter.debug prefix + "using provider #{@loader.get_provider}"
+
+        # compute service
+        @compute_service = ::Pinas::Compute::Provider::Compute
+        pinascompute = @compute_service.instance(@loader.get_compute)
+        compute_public_ip = pinascompute.server_get_public_ip(server_id)
+        return :undefined if compute_public_ip == ""
+        compute_public_ip
+      end
+
+      def self.get_compute_id_lookupbyip(prefix)
+        ipaddress = ::Facter.value('ipaddress')
+        if (ipaddress == nil or ipaddress == '')
+          ::Facter.warn prefix + "unable to continue without ipaddress facter"
+          return :undefined
+        end
+        ::Facter.debug prefix + "looking up compute id with #{ipaddress}"
+
+        # verify fog libraries can be loaded
+        if  !Puppet.features.fog?
+          ::Facter.warn prefix + "fog not loaded, compute_id_lookup empty"
+          return :undefined
+        end
+
+        # verify pinas common lib is available
+        if !Puppet.features.pinas?
+          ::Facter.warn prefix + "pinas common lib unavailable."
+          return :undefined
+        end
+
+        # verify fog_rc file found
+        if !Puppet.features.fog_credentials?
+          ::Facter.warn prefix + "fog_credentials unavailable, set FOG_RC"
+          return :undefined
+        end
+
+        # load the compute object
+        @loader = ::Pinas::Compute::Provider::Loader
+        if @loader.get_provider == nil
+          ::Facter.warn prefix + "Pinas fog configuration missing."
+          return :undefined
+        end
+
+        ::Facter.debug prefix + "using provider #{@loader.get_provider}"
+
+        # compute service
+        @compute_service = ::Pinas::Compute::Provider::Compute
+        pinascompute = @compute_service.instance(@loader.get_compute)
+        compute_id = pinascompute.get_server_id_by_private_ip(ipaddress)
+        compute_id = :undefined if compute_id == ""
+        compute_id
       end
     end
   end

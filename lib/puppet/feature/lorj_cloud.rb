@@ -1,4 +1,3 @@
-# == gardener::server_destroy
 # (c) Copyright 2014 Hewlett-Packard Development Company, L.P.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +12,5 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-class gardener::server_destroy (
-  $nodes            = ['pinas.1'],
-  $instance_id      = '',
-  $do_threaded      = true,
-  $blueprint        = 'openstack',
-  $cloud_conf       = $lorj_config,
-)
-{
-  include gardener::requirements
-  pinas {"server_destroy ${blueprint}":
-    ensure      => absent,
-    instance_id => $instance_id,
-    nodes       => $nodes,
-    do_parallel => $do_threaded,
-    conf        => $cloud_conf,
-    require     => Class['gardener::requirements'],
-  }
-}
+
+Puppet.features.add(:lorj_cloud, :libs => ["lorj_cloud"])

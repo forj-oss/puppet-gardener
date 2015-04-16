@@ -100,11 +100,10 @@ Facter.add("compute_vhost_name") do
 
         compute_vhost_name = :undefined if compute_vhost_name == ""
       rescue Exception => e
-        Facter.warn("compute_dns_name failed, #{e}")
+        Facter.warn("compute_vhost_name failed, #{e}")
         compute_vhost_name = :undefined
       end
       compute_vhost_name
     end
   end
 end
-
