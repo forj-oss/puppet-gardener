@@ -1,0 +1,4 @@
+# Helper for test-box.sh
+REPO_DIR=/etc/puppet/modules
+ROOT_REPO=gardener
+REPO=puppet-gardener
