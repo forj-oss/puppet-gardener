@@ -140,12 +140,27 @@ ${hpcloud_package}
     require:
      - 'Package[mime-types]'
      - 'Package[nokogiri]'
+  net-ssh:
+    ensure: '2.9.2'
+    provider: 'gem18'
+    require:
+     - 'Package[mime-types]'
+     - 'Package[nokogiri]'
+  fog-google:
+    ensure: '0.0.7'
+    provider: 'gem18'
+    require:
+     - 'Package[mime-types]'
+     - 'Package[nokogiri]'
+     - 'Package[net-ssh]'
   fog:
     ensure: '1.30.0'
     provider: 'gem18'
     require:
      - 'Package[mime-types]'
      - 'Package[nokogiri]'
+     - 'Package[net-ssh]'
+     - 'Package[fog-google]'
   excon:
     ensure: '0.31.0'
     provider: 'gem18'
