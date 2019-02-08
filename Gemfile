@@ -34,7 +34,7 @@ end
 if puppetversion = ENV['PUPPET_GEM_VERSION']
   gem 'puppet', puppetversion, :require => false
 else
-  gem 'puppet', '2.7.25', :require => false
+  gem 'puppet', '2.7.26', :require => false
 end
 
 
